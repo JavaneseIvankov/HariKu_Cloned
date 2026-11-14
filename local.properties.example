@@ -1,0 +1,9 @@
+# Copy this file to local.properties and fill in your own values.
+# local.properties is git-ignored and must never be committed.
+
+# Path to your Android SDK installation
+sdk.dir=/path/to/Android/Sdk
+
+# Gemini API key used by the chatbot feature (BuildConfig.GEMINI_API_KEY).
+# Leave blank to build without an AI backend configured.
+gemini.api.key=

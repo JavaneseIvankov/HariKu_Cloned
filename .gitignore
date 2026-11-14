@@ -1,0 +1,20 @@
+t *.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Real Firebase config and local SDK paths must never be committed
+app/google-services.json
+google-services.json
+local.properties
