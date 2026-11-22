@@ -4,12 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.auth.FirebaseAuthWeakPasswordException
-import kotlinx.coroutines.launch
 
 data class AuthUiState(
     val isLoading: Boolean = false,
@@ -64,12 +59,7 @@ class AuthViewModel(
     }
 
     private fun validate(email: String, password: String): Boolean {
-        val problem = when {
-            email.isBlank() -> "Email tidak boleh kosong"
-            !email.contains("@") -> "Format email tidak valid"
-            password.length < 6 -> "Password minimal 6 karakter"
-            else -> null
-        }
+        val problem = AuthValidation.validate(email, password)
         if (problem != null) {
             uiState = uiState.copy(error = problem, isLoading = false)
             return false
@@ -77,10 +67,6 @@ class AuthViewModel(
         return true
     }
 
-    private fun describe(error: Throwable?): String = when (error) {
-        is FirebaseAuthWeakPasswordException -> "Password terlalu lemah, gunakan minimal 6 karakter"
-        is FirebaseAuthUserCollisionException -> "Email ini sudah terdaftar"
-        is FirebaseAuthInvalidCredentialsException -> "Email atau password salah"
-        else -> error?.message ?: "Terjadi kesalahan, coba lagi"
-    }
+    private fun describe(error: Throwable?): String =
+        AuthValidation.describe(error?.javaClass?.simpleName, error?.message)
 }
