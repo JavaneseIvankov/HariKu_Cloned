@@ -1,6 +1,5 @@
 package com.hariku.core.ui.components
 
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,11 +13,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hariku.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,19 +43,18 @@ fun SosTopBar(title: String, onSosClick: () -> Unit) {
                 shape = CircleShape
             ) {
                 Text(
-                    text = "SOS",
+                    text = stringResource(R.string.sos_title),
                     style = TextStyle(
                         fontSize = 16.sp,
                         fontFamily = FontFamily.Default,
                         fontWeight = FontWeight(600),
-                        color = Color(0xFFFDFCFC)
+                        color = Color(0xFF331611)
                     )
                 )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.White
-        ),
-        windowInsets = WindowInsets(0.dp)
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     )
 }

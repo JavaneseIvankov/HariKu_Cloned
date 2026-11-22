@@ -1,4 +1,20 @@
 <resources>
     <string name="app_name">HariKu</string>
+    <string name="sos_title">SOS</string>
+    <string name="sos_question">Apakah kamu dalam keadaan darurat?</string>
+    <string name="sos_headline">Kamu tidak sendiri.\nDapatkan bantuan hanya dalam satu panggilan.</string>
+    <string name="sos_support">Meminta bantuan bukan berarti kamu lemah.</string>
+    <string name="sos_senses">Coba Teknik 5 Panca Indra</string>
+    <string name="sos_professional">Bantuan Profesional</string>
+    <string name="sos_professional_intro">Memiliki bantuan yang tepat pada waktu yang tepat dapat membantumu kembali lebih kuat.</string>
+    <string name="sos_professional_prompt">Jika kamu memerlukan bantuan atau seseorang untuk diajak bicara, berikut adalah daftar hotline</string>
+    <string name="sos_government">Hotline Pemerintah</string>
+    <string name="sos_medical_emergency">Darurat medis 24 jam:</string>
+    <string name="sos_ministry">Kementerian Kesehatan</string>
+    <string name="sos_halo_kemkes">Halo Kemenkes:</string>
+    <string name="sos_save_yourselves">Save Yourselves Indonesia (Jakarta)</string>
+    <string name="sos_contact_unverified">Kontak belum terverifikasi</string>
+    <string name="sos_dial_unavailable">Aplikasi telepon tidak tersedia.</string>
+    <string name="sos_back">Kembali</string>
     <string name="web_client_id" translatable="false">715861009439-e9dl3vto7cecn9hn41a0t4rvie4sk322.apps.googleusercontent.com</string>
 </resources>
