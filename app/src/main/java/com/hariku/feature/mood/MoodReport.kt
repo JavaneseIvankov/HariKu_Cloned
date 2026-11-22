@@ -46,19 +46,19 @@ data class MoodReport(
         ): MoodReport {
             val previousMonth = month.minusMonths(1)
             val moodsByLabel = Mood.entries.associateBy { it.label }
-            val moodsByDay = mutableMapOf<Int, MutableList<Mood>>()
+            val entriesByDay = mutableMapOf<Int, MutableList<Pair<MoodEntry, Mood>>>()
             val previousMoods = mutableListOf<Mood>()
 
-            // The DAO orders entries newest first, so ties favor the most recent mood.
             for (entry in entries) {
                 val mood = moodsByLabel[entry.moodType] ?: continue
                 val date = Instant.ofEpochMilli(entry.timestamp).atZone(zone).toLocalDate()
                 when (YearMonth.from(date)) {
-                    month -> moodsByDay.getOrPut(date.dayOfMonth) { mutableListOf() }.add(mood)
+                    month -> entriesByDay.getOrPut(date.dayOfMonth) { mutableListOf() }.add(entry to mood)
                     previousMonth -> previousMoods.add(mood)
                 }
             }
 
+            val moodsByDay = entriesByDay.mapValues { (_, dayEntries) -> dayEntries.map { it.second } }
             val monthly = breakdown(moodsByDay.values.flatten())
             val previous = breakdown(previousMoods)
             val weekly = (1..month.lengthOfMonth() step 7).map { start ->
@@ -74,8 +74,11 @@ data class MoodReport(
 
             return MoodReport(
                 monthly = monthly,
-                dailyMoods = moodsByDay.mapValues { (_, moods) ->
-                    moods.groupingBy { it }.eachCount().maxBy { it.value }.key
+                dailyMoods = entriesByDay.mapValues { (_, dayEntries) ->
+                    val counts = dayEntries.groupingBy { it.second }.eachCount()
+                    dayEntries.maxWith(
+                        compareBy({ counts.getValue(it.second) }, { it.first.timestamp }, { it.first.id })
+                    ).second
                 },
                 weekly = weekly,
                 positiveChange = positiveChange
