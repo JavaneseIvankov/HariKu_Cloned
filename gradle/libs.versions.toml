@@ -70,7 +70,7 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 
 # Gemini
-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version = "0.1.2" }
+generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version = "0.9.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

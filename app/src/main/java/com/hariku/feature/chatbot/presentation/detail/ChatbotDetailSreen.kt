@@ -69,11 +69,21 @@ fun ChatbotDetailScreen(
         }
     }
     
-    LaunchedEffect(uiState.messages.size) {
-        if (uiState.messages.isNotEmpty()) {
-            coroutineScope.launch {
-                listState.animateScrollToItem(uiState.messages.size - 1)
-            }
+    LaunchedEffect(uiState.messages.size, uiState.isSending) {
+        if (uiState.messages.isEmpty()) return@LaunchedEffect
+
+        // The list is grouped by date and each group is preceded by a
+        // separator item, so the message count is not a valid item index.
+        // Each message contributes one item plus one separator per distinct
+        // date, and the sending indicator adds one more at the end.
+        val dateGroups = uiState.messages
+            .groupBy { getDateLabel(it.timestamp) }
+            .size
+        val itemCount = uiState.messages.size + dateGroups +
+            if (uiState.isSending) 1 else 0
+
+        coroutineScope.launch {
+            listState.animateScrollToItem(itemCount - 1)
         }
     }
     

@@ -1,6 +1,7 @@
 package com.hariku.feature.chatbot.data.remote
 
 import com.google.ai.client.generativeai.GenerativeModel
+import com.google.ai.client.generativeai.type.generationConfig
 import com.hariku.feature.chatbot.domain.model.Chatbot
 
 class GeminiApiService(
@@ -10,6 +11,11 @@ class GeminiApiService(
         // gemini-2.0-flash-lite was retired upstream; the API now points to
         // 3.5-flash-lite for this tier.
         private const val MODEL_NAME = "gemini-3.5-flash-lite"
+
+        // The system prompt asks for multi-paragraph replies, so give the model
+        // the room to finish them rather than relying on a small implicit
+        // budget. 1024 tokens covers the longest reply observed so far.
+        private const val MAX_OUTPUT_TOKENS = 1024
     }
     
     suspend fun generateResponse(
@@ -32,7 +38,10 @@ class GeminiApiService(
         return try {
             val model = GenerativeModel(
                 modelName = MODEL_NAME,
-                apiKey = apiKey
+                apiKey = apiKey,
+                generationConfig = generationConfig {
+                    maxOutputTokens = MAX_OUTPUT_TOKENS
+                }
             )
             
             val systemInstruction = buildSystemInstruction(chatbot)
