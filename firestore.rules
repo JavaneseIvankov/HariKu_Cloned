@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Every document is scoped to the signed-in owner. Chat data lives under
+    // chatbots/{uid}/bots/{botId}/messages/{messageId}, so the uid in the path
+    // is checked against the caller for all reads and writes.
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    match /chatbots/{userId}/bots/{botId} {
+      allow read, write: if owns(userId);
+    }
+
+    match /chatbots/{userId}/bots/{botId}/messages/{messageId} {
+      allow read, write: if owns(userId);
+    }
+
+    match /users/{userId}/{document=**} {
+      allow read, write: if owns(userId);
+    }
+
+    // Deny anything not explicitly matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

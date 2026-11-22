@@ -5,15 +5,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -23,7 +26,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.hariku.core.ui.components.Routes
 import com.hariku.core.ui.components.SosTopBar
+import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.ui.theme.HariKuTheme
+import com.hariku.feature.auth.presentation.AuthScreen
 import com.hariku.feature.chatbot.presentation.ChatbotScreen
 import com.hariku.feature.chatbot.presentation.customize.CustomizeCatScreen
 import com.hariku.feature.chatbot.presentation.customize.CustomizeNewCatScreen
@@ -61,11 +66,33 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
     val route = navController.currentBackStackEntryAsState().value?.destination?.route
     val showSos = route == Routes.SosGraph.route || route == Routes.SosProfessional.route
     LaunchedEffect(showSos) { onSosVisibilityChanged(showSos) }
-    NavHost(navController = navController, startDestination = Routes.Home.route) {
+    // With no cached session the app opens on the auth screen; a restored
+    // session goes straight to the home destination.
+    val startDestination = if (FirebaseAuth.getInstance().currentUser != null) {
+        Routes.Home.route
+    } else {
+        Routes.AuthGraph.route
+    }
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable(Routes.AuthGraph.route) {
+            AuthScreen(
+                onSignedIn = {
+                    navController.navigate(Routes.Home.route) {
+                        popUpTo(Routes.AuthGraph.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Routes.Home.route) {
             HomeScreen(
                 onOpenSos = { navController.navigate(Routes.SosGraph.route) },
-                onOpenChat = { navController.navigate(Routes.Chatbot.route) }
+                onOpenChat = { navController.navigate(Routes.Chatbot.route) },
+                onSignOut = {
+                    FirebaseAuth.getInstance().signOut()
+                    navController.navigate(Routes.AuthGraph.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
         composable(Routes.Chatbot.route) { ChatbotScreen(navController) }
@@ -93,7 +120,11 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
 }
 
 @Composable
-private fun HomeScreen(onOpenSos: () -> Unit, onOpenChat: () -> Unit) {
+private fun HomeScreen(
+    onOpenSos: () -> Unit,
+    onOpenChat: () -> Unit,
+    onSignOut: () -> Unit
+) {
     Scaffold(
         topBar = {
             SosTopBar(
@@ -102,14 +133,18 @@ private fun HomeScreen(onOpenSos: () -> Unit, onOpenChat: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentAlignment = Alignment.Center
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(onClick = onOpenChat) {
                 Text(text = "Buka Chat")
+            }
+            TextButton(onClick = onSignOut) {
+                Text(text = "Keluar")
             }
         }
     }
@@ -119,6 +154,6 @@ private fun HomeScreen(onOpenSos: () -> Unit, onOpenChat: () -> Unit) {
 @Composable
 private fun HomePreview() {
     HariKuTheme {
-        HomeScreen(onOpenSos = {}, onOpenChat = {})
+        HomeScreen(onOpenSos = {}, onOpenChat = {}, onSignOut = {})
     }
 }
