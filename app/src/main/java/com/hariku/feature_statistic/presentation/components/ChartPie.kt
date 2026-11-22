@@ -36,6 +36,7 @@ fun ChartPie(
 
     Canvas(modifier = modifier) {
         val totalValue = data.sumOf { it.value.toDouble() }.toFloat()
+        if (totalValue <= 0f) return@Canvas
         var currentStartAngle = -90f
 
         val chartSize = size.minDimension
@@ -43,7 +44,7 @@ fun ChartPie(
 
         val centerOffset = Offset(size.width / 2, size.height / 2)
 
-        data.forEach { item ->
+        data.filter { it.value > 0f }.forEach { item ->
             val sweepAngle = (item.value / totalValue) * 360f
 
             drawArc(

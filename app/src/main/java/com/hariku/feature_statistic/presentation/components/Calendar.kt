@@ -164,10 +164,10 @@ fun CalendarView(
                         Icon(
                             painter = painterResource(R.drawable.ic_chevron_right),
                             contentDescription = "Bulan berikutnya",
-                            tint = chevronColor,
+                            tint = if (period < YearMonth.now()) chevronColor else Color.LightGray,
                             modifier = Modifier
                                 .size(24.dp)
-                                .clickable {
+                                .clickable(enabled = period < YearMonth.now()) {
                                     val next = period.plusMonths(1)
                                     onMonthChange(next.year, next.monthValue - 1)
                                 }
