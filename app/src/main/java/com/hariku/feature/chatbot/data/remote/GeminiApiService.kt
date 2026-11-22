@@ -7,7 +7,9 @@ class GeminiApiService(
     private val apiKey: String
 ) {
     companion object {
-        private const val MODEL_NAME = "gemini-2.0-flash-lite"
+        // gemini-2.0-flash-lite was retired upstream; the API now points to
+        // 3.5-flash-lite for this tier.
+        private const val MODEL_NAME = "gemini-3.5-flash-lite"
     }
     
     suspend fun generateResponse(
