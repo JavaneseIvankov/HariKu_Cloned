@@ -40,7 +40,8 @@ fun ChartPie(
         var currentStartAngle = -90f
 
         val chartSize = size.minDimension
-        val radius = (chartSize - strokeWidth.toPx()) / 2
+        val stroke = strokeWidth.toPx().coerceAtMost(chartSize / 2)
+        val radius = (chartSize - stroke) / 2
 
         val centerOffset = Offset(size.width / 2, size.height / 2)
 
@@ -53,11 +54,11 @@ fun ChartPie(
                 sweepAngle = sweepAngle,
                 useCenter = false,
                 topLeft = Offset(
-                    (size.width - chartSize) / 2 + strokeWidth.toPx() / 2,
-                    (size.height - chartSize) / 2 + strokeWidth.toPx() / 2
+                    (size.width - chartSize) / 2 + stroke / 2,
+                    (size.height - chartSize) / 2 + stroke / 2
                 ),
-                size = Size(chartSize - strokeWidth.toPx(), chartSize - strokeWidth.toPx()),
-                style = Stroke(width = strokeWidth.toPx())
+                size = Size(chartSize - stroke, chartSize - stroke),
+                style = Stroke(width = stroke)
             )
 
             val midAngle = currentStartAngle + (sweepAngle / 2)

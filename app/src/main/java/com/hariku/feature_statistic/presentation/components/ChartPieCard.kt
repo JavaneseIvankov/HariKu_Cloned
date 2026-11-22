@@ -60,7 +60,7 @@ fun ChartPieCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = Color.White, contentColor = Color.Black),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -95,30 +95,38 @@ fun ChartPieCard(
                 enter = fadeIn() + expandVertically(animationSpec = tween(300)),
                 exit = fadeOut() + shrinkVertically(animationSpec = tween(300))
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) {
-                        ChartPie(
-                            modifier = Modifier.size(180.dp),
-                            data = chartDataList
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(
-                        modifier = Modifier.weight(0.8f),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                if (chartDataList.any { it.value > 0f }) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        LegendItem(color = colorNegative, label = "Negatif")
-                        LegendItem(color = colorPositive, label = "Positif")
-                        LegendItem(color = colorNeutral, label = "Netral")
+                        Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) {
+                            ChartPie(
+                                modifier = Modifier.size(180.dp),
+                                data = chartDataList
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(
+                            modifier = Modifier.weight(0.8f),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            LegendItem(color = colorNegative, label = "Negatif")
+                            LegendItem(color = colorPositive, label = "Positif")
+                            LegendItem(color = colorNeutral, label = "Netral")
+                        }
                     }
+                } else {
+                    Text(
+                        text = "Belum ada data sentimen bulanan",
+                        color = Color.Gray,
+                        modifier = Modifier.padding(24.dp)
+                    )
                 }
             }
         }
