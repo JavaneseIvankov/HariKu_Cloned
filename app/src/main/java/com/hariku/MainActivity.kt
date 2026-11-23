@@ -5,27 +5,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.hariku.core.ui.components.MainScaffold
 import com.hariku.core.ui.components.Routes
-import com.hariku.core.ui.components.SosTopBar
 import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.ui.theme.HariKuTheme
 import com.hariku.feature.auth.presentation.login.LoginScreen
@@ -36,6 +24,8 @@ import com.hariku.feature.chatbot.presentation.customize.CustomizePersonalCatScr
 import com.hariku.feature.chatbot.presentation.detail.ChatbotDetailScreen
 import com.hariku.feature.sos.SosScreen
 import com.hariku.feature.sos.SosProfessionalScreen
+import com.hariku.feature.home.presentation.HomeScreen
+import com.hariku.feature.profile.presentation.ProfileScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,14 +90,20 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
                 initialTabIndex = 0,
                 homeContent = {
                     HomeScreen(
-                        onOpenSos = { navController.navigate(Routes.SosGraph.route) },
-                        onSignOut = {
-                            FirebaseAuth.getInstance().signOut()
-                            navController.navigate(Routes.Login.route) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        }
+                        navController = navController,
+                        onOpenProfile = { navController.navigate(Routes.Profile.route) },
+                        onOpenSos = { navController.navigate(Routes.SosGraph.route) }
                     )
+                }
+            )
+        }
+        composable(Routes.Profile.route) {
+            ProfileScreen(
+                navController = navController,
+                onLogout = {
+                    navController.navigate(Routes.Login.route) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
                 }
             )
         }
@@ -134,37 +130,3 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
     }
 }
 
-@Composable
-private fun HomeScreen(
-    onOpenSos: () -> Unit,
-    onSignOut: () -> Unit
-) {
-    Scaffold(
-        topBar = {
-            SosTopBar(
-                title = stringResource(R.string.app_name),
-                onSosClick = onOpenSos
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            TextButton(onClick = onSignOut) {
-                Text(text = "Keluar")
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun HomePreview() {
-    HariKuTheme {
-        HomeScreen(onOpenSos = {}, onSignOut = {})
-    }
-}
