@@ -65,7 +65,7 @@ private val Rubik = FontFamily(
 )
 
 @Composable
-fun SosScreen(onBack: () -> Unit, onProfessional: () -> Unit) {
+fun SosScreen(onBack: () -> Unit, onSenses: () -> Unit, onProfessional: () -> Unit) {
     SosLayout(onBack) {
         Text(stringResource(R.string.sos_question))
         Spacer(Modifier.height(26.dp))
@@ -80,8 +80,7 @@ fun SosScreen(onBack: () -> Unit, onProfessional: () -> Unit) {
         Text(stringResource(R.string.sos_support))
         Spacer(Modifier.height(42.dp))
         OutlinedButton(
-            onClick = {},
-            enabled = false,
+            onClick = onSenses,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             shape = CardShape,
             border = BorderStroke(2.5.dp, Rose)
