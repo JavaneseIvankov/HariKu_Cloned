@@ -16,6 +16,7 @@ import com.hariku.core.ui.components.MainScaffold
 import com.hariku.core.ui.components.Routes
 import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.ui.theme.HariKuTheme
+import com.hariku.feature.sos.SensesScreen
 import com.hariku.feature.auth.presentation.login.LoginScreen
 import com.hariku.feature.auth.presentation.register.RegisterScreen
 import com.hariku.feature.chatbot.presentation.customize.CustomizeCatScreen
@@ -54,7 +55,9 @@ class MainActivity : ComponentActivity() {
 private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
     val navController = rememberNavController()
     val route = navController.currentBackStackEntryAsState().value?.destination?.route
-    val showSos = route == Routes.SosGraph.route || route == Routes.SosProfessional.route
+    val showSos = route == Routes.SosGraph.route ||
+        route == Routes.SosProfessional.route ||
+        route == Routes.Senses.route
     LaunchedEffect(showSos) { onSosVisibilityChanged(showSos) }
     // With no cached session the app opens on the auth screen; a restored
     // session goes straight to the home destination.
@@ -121,8 +124,12 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
         composable(Routes.SosGraph.route) {
             SosScreen(
                 onBack = { navController.popBackStack() },
+                onSenses = { navController.navigate(Routes.Senses.route) },
                 onProfessional = { navController.navigate(Routes.SosProfessional.route) }
             )
+        }
+        composable(Routes.Senses.route) {
+            SensesScreen(onExit = { navController.popBackStack() })
         }
         composable(Routes.SosProfessional.route) {
             SosProfessionalScreen(onBack = { navController.popBackStack() })
