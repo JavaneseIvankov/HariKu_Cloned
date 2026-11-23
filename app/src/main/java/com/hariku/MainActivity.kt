@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,12 +23,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.hariku.core.ui.components.MainScaffold
 import com.hariku.core.ui.components.Routes
 import com.hariku.core.ui.components.SosTopBar
 import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.ui.theme.HariKuTheme
 import com.hariku.feature.auth.presentation.AuthScreen
-import com.hariku.feature.chatbot.presentation.ChatbotScreen
 import com.hariku.feature.chatbot.presentation.customize.CustomizeCatScreen
 import com.hariku.feature.chatbot.presentation.customize.CustomizeNewCatScreen
 import com.hariku.feature.chatbot.presentation.customize.CustomizePersonalCatScreen
@@ -84,18 +83,22 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
             )
         }
         composable(Routes.Home.route) {
-            HomeScreen(
-                onOpenSos = { navController.navigate(Routes.SosGraph.route) },
-                onOpenChat = { navController.navigate(Routes.Chatbot.route) },
-                onSignOut = {
-                    FirebaseAuth.getInstance().signOut()
-                    navController.navigate(Routes.AuthGraph.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
+            MainScaffold(
+                parentNavController = navController,
+                initialTabIndex = 0,
+                homeContent = {
+                    HomeScreen(
+                        onOpenSos = { navController.navigate(Routes.SosGraph.route) },
+                        onSignOut = {
+                            FirebaseAuth.getInstance().signOut()
+                            navController.navigate(Routes.AuthGraph.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    )
                 }
             )
         }
-        composable(Routes.Chatbot.route) { ChatbotScreen(navController) }
         composable("detail_chatbot/{chatbotId}") { backStackEntry ->
             val chatbotId = backStackEntry.arguments?.getString("chatbotId") ?: ""
             ChatbotDetailScreen(navController, chatbotId)
@@ -122,7 +125,6 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
 @Composable
 private fun HomeScreen(
     onOpenSos: () -> Unit,
-    onOpenChat: () -> Unit,
     onSignOut: () -> Unit
 ) {
     Scaffold(
@@ -140,9 +142,6 @@ private fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Button(onClick = onOpenChat) {
-                Text(text = "Buka Chat")
-            }
             TextButton(onClick = onSignOut) {
                 Text(text = "Keluar")
             }
@@ -154,6 +153,6 @@ private fun HomeScreen(
 @Composable
 private fun HomePreview() {
     HariKuTheme {
-        HomeScreen(onOpenSos = {}, onOpenChat = {}, onSignOut = {})
+        HomeScreen(onOpenSos = {}, onSignOut = {})
     }
 }
