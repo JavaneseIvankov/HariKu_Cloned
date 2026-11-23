@@ -1,20 +1,38 @@
 package com.hariku.feature.auth.presentation
 
 /**
- * Pure credential validation, kept separate from AuthViewModel so the rules
+ * Pure credential validation, kept separate from the ViewModels so the rules
  * can be unit tested without touching Firebase.
  */
 object AuthValidation {
 
-    const val MIN_PASSWORD_LENGTH = 6
+    /** Matches SignUpUseCase so the UI rejects exactly what the use case rejects. */
+    const val MIN_PASSWORD_LENGTH = 8
 
-    /** Returns a user-facing problem, or null when the input is acceptable. */
-    fun validate(email: String, password: String): String? = when {
+    fun validateEmail(email: String): String? = when {
         email.isBlank() -> "Email tidak boleh kosong"
-        !email.trim().contains("@") -> "Format email tidak valid"
+        !email.contains("@") -> "Format email tidak valid"
+        else -> null
+    }
+
+    fun validatePassword(password: String): String? = when {
+        password.isBlank() -> "Kata sandi tidak boleh kosong"
         password.length < MIN_PASSWORD_LENGTH ->
             "Password minimal $MIN_PASSWORD_LENGTH karakter"
         else -> null
+    }
+
+    /** Registration additionally requires a name and a matching confirmation. */
+    fun validateRegistration(
+        name: String,
+        email: String,
+        password: String,
+        confirmation: String
+    ): String? = when {
+        name.isBlank() -> "Nama tidak boleh kosong"
+        else -> validateEmail(email)
+            ?: validatePassword(password)
+            ?: if (password != confirmation) "Konfirmasi kata sandi tidak sama" else null
     }
 
     /** Maps a Firebase auth failure to a readable Indonesian message. */

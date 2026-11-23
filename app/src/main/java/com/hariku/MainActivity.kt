@@ -28,7 +28,8 @@ import com.hariku.core.ui.components.Routes
 import com.hariku.core.ui.components.SosTopBar
 import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.ui.theme.HariKuTheme
-import com.hariku.feature.auth.presentation.AuthScreen
+import com.hariku.feature.auth.presentation.login.LoginScreen
+import com.hariku.feature.auth.presentation.register.RegisterScreen
 import com.hariku.feature.chatbot.presentation.customize.CustomizeCatScreen
 import com.hariku.feature.chatbot.presentation.customize.CustomizeNewCatScreen
 import com.hariku.feature.chatbot.presentation.customize.CustomizePersonalCatScreen
@@ -70,16 +71,27 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
     val startDestination = if (FirebaseAuth.getInstance().currentUser != null) {
         Routes.Home.route
     } else {
-        Routes.AuthGraph.route
+        Routes.Login.route
     }
     NavHost(navController = navController, startDestination = startDestination) {
-        composable(Routes.AuthGraph.route) {
-            AuthScreen(
-                onSignedIn = {
+        composable(Routes.Login.route) {
+            LoginScreen(
+                onLoggedIn = {
                     navController.navigate(Routes.Home.route) {
-                        popUpTo(Routes.AuthGraph.route) { inclusive = true }
+                        popUpTo(Routes.Login.route) { inclusive = true }
                     }
-                }
+                },
+                onNavigateToRegister = { navController.navigate(Routes.Register.route) }
+            )
+        }
+        composable(Routes.Register.route) {
+            RegisterScreen(
+                onRegistered = {
+                    navController.navigate(Routes.Home.route) {
+                        popUpTo(Routes.Login.route) { inclusive = true }
+                    }
+                },
+                onNavigateToLogin = { navController.popBackStack() }
             )
         }
         composable(Routes.Home.route) {
@@ -91,7 +103,7 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
                         onOpenSos = { navController.navigate(Routes.SosGraph.route) },
                         onSignOut = {
                             FirebaseAuth.getInstance().signOut()
-                            navController.navigate(Routes.AuthGraph.route) {
+                            navController.navigate(Routes.Login.route) {
                                 popUpTo(0) { inclusive = true }
                             }
                         }

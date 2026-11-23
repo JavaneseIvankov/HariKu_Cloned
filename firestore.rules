@@ -21,6 +21,15 @@ service cloud.firestore {
       allow read, write: if owns(userId);
     }
 
+    // Profile documents written at sign-up. The collection is capitalised to
+    // match what AuthRemoteDataSource writes.
+    match /Users/{userId} {
+      allow read: if owns(userId);
+      allow create: if owns(userId);
+      allow update: if owns(userId);
+      allow delete: if false;
+    }
+
     match /users/{userId}/{document=**} {
       allow read, write: if owns(userId);
     }
