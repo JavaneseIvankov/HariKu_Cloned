@@ -5,8 +5,14 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
-    // google-services is applied conditionally below: it hard-fails without
-    // app/google-services.json, which is intentionally not in the repo.
+}
+
+// The google-services plugin fails configuration when app/google-services.json
+// is missing, and that file is secret so it is not committed. Applying it only
+// when the file is present keeps a fresh clone buildable while still wiring
+// Firebase properly for anyone who supplies their own config.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 android {
@@ -61,6 +67,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
 
     implementation(platform(libs.androidx.compose.bom))
