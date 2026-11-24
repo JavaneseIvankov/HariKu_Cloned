@@ -6,13 +6,13 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.hariku.core.ui.components.MainScaffold
 import com.hariku.core.ui.components.Routes
 import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.ui.theme.HariKuTheme
@@ -25,15 +25,15 @@ import com.hariku.feature.chatbot.presentation.customize.CustomizePersonalCatScr
 import com.hariku.feature.chatbot.presentation.detail.ChatbotDetailScreen
 import com.hariku.feature.sos.SosScreen
 import com.hariku.feature.sos.SosProfessionalScreen
-import com.hariku.feature.home.presentation.HomeScreen
 import com.hariku.feature.profile.presentation.ProfileScreen
+import com.hariku.feature.mood.MoodMainTabs
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             HariKuTheme {
-                HariKuNavigation(onSosVisibilityChanged = ::updateSystemBars)
+                HariKuNavigation(application as HariKuApp, onSosVisibilityChanged = ::updateSystemBars)
             }
         }
     }
@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
+private fun HariKuNavigation(app: HariKuApp, onSosVisibilityChanged: (Boolean) -> Unit) {
     val navController = rememberNavController()
     val route = navController.currentBackStackEntryAsState().value?.destination?.route
     val showSos = route == Routes.SosGraph.route ||
@@ -88,17 +88,11 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
             )
         }
         composable(Routes.Home.route) {
-            MainScaffold(
-                parentNavController = navController,
-                initialTabIndex = 0,
-                homeContent = {
-                    HomeScreen(
-                        navController = navController,
-                        onOpenProfile = { navController.navigate(Routes.Profile.route) },
-                        onOpenSos = { navController.navigate(Routes.SosGraph.route) }
-                    )
-                }
-            )
+            val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return@composable
+            key(userId) {
+                val moodDao = remember(app, userId) { app.moodDao(userId) }
+                MoodMainTabs(navController, moodDao)
+            }
         }
         composable(Routes.Profile.route) {
             ProfileScreen(

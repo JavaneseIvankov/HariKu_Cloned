@@ -11,7 +11,11 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 
 class HariKuApp : Application() {
-    val moodDatabase by lazy { MoodDatabase.open(this) }
+    private val moodDatabases = mutableMapOf<String, MoodDatabase>()
+
+    @Synchronized
+    fun moodDao(userId: String) =
+        moodDatabases.getOrPut(userId) { MoodDatabase.open(this, userId) }.moodDao()
 
     override fun onCreate() {
         super.onCreate()

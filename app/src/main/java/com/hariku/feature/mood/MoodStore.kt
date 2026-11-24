@@ -1,6 +1,7 @@
 package com.hariku.feature.mood
 
 import android.content.Context
+import android.net.Uri
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -32,8 +33,11 @@ abstract class MoodDatabase : RoomDatabase() {
     abstract fun moodDao(): MoodDao
 
     companion object {
-        fun open(context: Context): MoodDatabase =
-            Room.databaseBuilder(context.applicationContext, MoodDatabase::class.java, "mood-analytics.db")
-                .build()
+        fun open(context: Context, userId: String): MoodDatabase =
+            Room.databaseBuilder(
+                context.applicationContext,
+                MoodDatabase::class.java,
+                "mood-analytics-${Uri.encode(userId)}.db"
+            ).build()
     }
 }

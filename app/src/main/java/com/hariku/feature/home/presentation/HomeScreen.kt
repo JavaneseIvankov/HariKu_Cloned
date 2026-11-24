@@ -49,14 +49,14 @@ private val HomeInk = Color(0xFF352C28)
 private val HomeMuted = Color(0xFF74665E)
 private val HomeAccent = Color(0xFFC97D50)
 private val HomeSage = Color(0xFFEAF1E8)
-private val HomeBlue = Color(0xFFE9F0F7)
 
 @Composable
 fun HomeScreen(
     navController: NavController,
     onOpenProfile: () -> Unit,
     onOpenSos: () -> Unit,
-    viewModel: HomeViewModel = koinViewModel()
+    viewModel: HomeViewModel = koinViewModel(),
+    moodContent: (@Composable () -> Unit)? = null
 ) {
     val user = viewModel.currentUser
     HomeContent(
@@ -64,7 +64,8 @@ fun HomeScreen(
         photoUrl = user?.photoUrl,
         onOpenProfile = onOpenProfile,
         onOpenSos = onOpenSos,
-        onOpenChat = { navController.navigate(Routes.CustomizeCat.route) }
+        onOpenChat = { navController.navigate(Routes.CustomizeCat.route) },
+        moodContent = moodContent
     )
 }
 
@@ -74,7 +75,8 @@ private fun HomeContent(
     photoUrl: String?,
     onOpenProfile: () -> Unit,
     onOpenSos: () -> Unit,
-    onOpenChat: () -> Unit
+    onOpenChat: () -> Unit,
+    moodContent: (@Composable () -> Unit)? = null
 ) {
     LazyColumn(
         modifier = Modifier
@@ -147,12 +149,16 @@ private fun HomeContent(
             }
         }
         item {
-            PlaceholderSection(
-                title = "Suasana hati",
-                owner = "Quick Mood Tracker · Raditya",
-                message = "Pencatatan suasana hati akan tersedia di bagian ini.",
-                tint = HomeSage
-            )
+            if (moodContent != null) {
+                moodContent()
+            } else {
+                PlaceholderSection(
+                    title = "Suasana hati",
+                    owner = "Quick Mood Tracker · Raditya",
+                    message = "Pencatatan suasana hati akan tersedia di bagian ini.",
+                    tint = HomeSage
+                )
+            }
         }
         item {
             PlaceholderSection(
@@ -162,14 +168,7 @@ private fun HomeContent(
                 tint = Color(0xFFF9EEE5)
             )
         }
-        item {
-            PlaceholderSection(
-                title = "Ringkasan suasana hati",
-                owner = "Mood Analytics & Reporting · Bagas",
-                message = "Ringkasan dan laporan akan tersedia di bagian ini.",
-                tint = HomeBlue
-            )
-        }
+
         item {
             Text(
                 text = "Bagian ini akan terhubung ke fitur masing-masing setelah implementasi pemiliknya selesai.",
