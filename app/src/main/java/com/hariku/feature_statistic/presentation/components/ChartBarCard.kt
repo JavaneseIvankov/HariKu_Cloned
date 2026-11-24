@@ -82,7 +82,7 @@ fun ChartBarCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Sentimen Jurnal Mingguan",
+                    text = "Sentimen Mood Mingguan",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
                     color = ColorTextDark

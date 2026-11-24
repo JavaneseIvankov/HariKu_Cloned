@@ -73,7 +73,7 @@ fun ChartPieCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Sentimen Jurnal",
+                    text = "Sentimen Mood",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Normal
                 )
