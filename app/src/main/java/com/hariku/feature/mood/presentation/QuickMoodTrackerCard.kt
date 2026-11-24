@@ -1,9 +1,14 @@
 package com.hariku.feature.mood.presentation
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -157,16 +161,25 @@ fun QuickMoodTrackerCard(
 
             // Title & latest mood subtitle
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = if (latestEntry == null) {
-                        "Bagaimana suasana hatimu hari ini?"
-                    } else {
-                        "Mood terakhir: ${latestEntry.mood.label}"
+                AnimatedContent(
+                    targetState = latestEntry?.mood,
+                    transitionSpec = {
+                        (fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 3 })
+                            .togetherWith(fadeOut(tween(140)))
                     },
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (latestEntry == null) MoodInk else MoodSage
-                )
+                    label = "latest_mood_title"
+                ) { latestMood ->
+                    Text(
+                        text = if (latestMood == null) {
+                            "Bagaimana suasana hatimu hari ini?"
+                        } else {
+                            "Mood terakhir: ${latestMood.label}"
+                        },
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (latestMood == null) MoodInk else MoodSage
+                    )
+                }
                 Text(
                     text = if (latestEntry == null) {
                         "Ketuk salah satu ekspresi untuk mencatat suasana hatimu dengan cepat."
@@ -445,43 +458,15 @@ private fun MoodOptionItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    AnimatedMoodOptionItem(
+        visual = visual,
+        isSelected = isSelected,
+        isDisabled = isDisabled,
+        selectedColor = MoodSage,
+        defaultLabelColor = MoodInk,
+        onClick = onClick,
         modifier = modifier
-            .alpha(if (isDisabled && !isSelected) 0.45f else 1f)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(enabled = !isDisabled, onClick = onClick)
-            .padding(vertical = 4.dp)
-    ) {
-        Box(
-            modifier = Modifier.size(46.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .background(MoodSage.copy(alpha = 0.16f), CircleShape)
-                        .border(2.5.dp, MoodSage, CircleShape)
-                )
-            }
-            Image(
-                painter = painterResource(id = visual.iconRes),
-                contentDescription = visual.type.label,
-                modifier = Modifier.size(36.dp)
-            )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = visual.type.label,
-            fontSize = 11.sp,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) MoodSage else MoodInk
-        )
-    }
+    )
 }
 
 @Composable

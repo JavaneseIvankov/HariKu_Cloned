@@ -9,6 +9,8 @@ import com.hariku.feature.mood.domain.model.MoodType
 import com.hariku.feature.mood.domain.usecase.DeleteMoodEntryUseCase
 import com.hariku.feature.mood.domain.usecase.ObserveMoodEntriesUseCase
 import com.hariku.feature.mood.domain.usecase.SaveQuickMoodUseCase
+import com.hariku.feature.mood.presentation.MoodBurstStyle
+import com.hariku.feature.mood.presentation.MoodTapMotionCatalog
 import com.hariku.feature.mood.presentation.QuickMoodUiState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -153,6 +155,49 @@ class QuickMoodTrackerTest {
         assertEquals(1, empty.totalHistoryPages)
         assertEquals(0, empty.currentHistoryPage)
         assertTrue(empty.pagedTodayEntries.isEmpty())
+    }
+
+    @Test
+    fun moodTapMotionSpecsCoverEveryMoodAndReturnCleanlyToRest() {
+        val sampleFractions = (0..20).map { it / 20f }
+
+        for (mood in MoodType.entries) {
+            val spec = MoodTapMotionCatalog.specFor(mood)
+            assertTrue("Duration must be positive for $mood", spec.durationMillis in 350..800)
+
+            val start = spec.sampleAt(0f)
+            val end = spec.sampleAt(1f)
+            for (boundary in listOf(start, end)) {
+                assertEquals(1f, boundary.scaleX, 0.0001f)
+                assertEquals(1f, boundary.scaleY, 0.0001f)
+                assertEquals(0f, boundary.offsetXDp, 0.0001f)
+                assertEquals(0f, boundary.offsetYDp, 0.0001f)
+                assertEquals(0f, boundary.rotationDeg, 0.0001f)
+                assertEquals(1f, boundary.iconAlpha, 0.0001f)
+            }
+
+            val frames = sampleFractions.map(spec::sampleAt)
+            val maxScale = frames.maxOf { maxOf(it.scaleX, it.scaleY) }
+            assertTrue("Expected noticeable pop scale for $mood", maxScale > 1.10f)
+            assertTrue(frames.all { it.iconAlpha in 0.5f..1f })
+        }
+
+        // Expressive signatures by mood family
+        val senangMinY = (0..20).minOf { MoodTapMotionCatalog.specFor(MoodType.SENANG).sampleAt(it / 20f).offsetYDp }
+        val semangatMinY = (0..20).minOf { MoodTapMotionCatalog.specFor(MoodType.SEMANGAT).sampleAt(it / 20f).offsetYDp }
+        assertTrue(senangMinY < -5f)
+        assertTrue(semangatMinY < -6f)
+        assertEquals(MoodBurstStyle.JOYFUL_SPARKS, MoodTapMotionCatalog.specFor(MoodType.SENANG).burstStyle)
+
+        val marahMaxShake = (0..20).maxOf {
+            kotlin.math.abs(MoodTapMotionCatalog.specFor(MoodType.MARAH).sampleAt(it / 20f).offsetXDp)
+        }
+        assertTrue(marahMaxShake > 3f)
+        assertEquals(MoodBurstStyle.DOUBLE_PULSE, MoodTapMotionCatalog.specFor(MoodType.MARAH).burstStyle)
+
+        val lelahMaxSlump = (0..20).maxOf { MoodTapMotionCatalog.specFor(MoodType.LELAH).sampleAt(it / 20f).offsetYDp }
+        assertTrue(lelahMaxSlump > 4f)
+        assertEquals(MoodBurstStyle.SOFT_RIPPLE, MoodTapMotionCatalog.specFor(MoodType.LELAH).burstStyle)
     }
 
     private class FakeMoodDao : MoodDao {
