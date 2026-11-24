@@ -82,5 +82,9 @@ class MoodReportTest {
     }
 
     private fun entry(label: String, time: String, id: Long = 0) =
-        MoodEntry(moodType = label, timestamp = Instant.parse(time).toEpochMilli(), id = id)
+        MoodRecord(
+            mood = Mood.entries.first { it.label == label },
+            timestamp = Instant.parse(time).toEpochMilli(),
+            id = id
+        )
 }

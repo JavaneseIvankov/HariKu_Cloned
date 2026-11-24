@@ -21,6 +21,8 @@ enum class Mood(val label: String, val sentiment: Sentiment) {
     EMPTY("Hampa", Sentiment.NEGATIVE)
 }
 
+data class MoodRecord(val mood: Mood, val timestamp: Long, val id: Long = 0)
+
 data class MoodBreakdown(val counts: Map<Mood, Int>) {
     val total: Int get() = counts.values.sum()
 
@@ -40,17 +42,16 @@ data class MoodReport(
 ) {
     companion object {
         fun from(
-            entries: List<MoodEntry>,
+            entries: List<MoodRecord>,
             month: YearMonth,
             zone: ZoneId = ZoneId.systemDefault()
         ): MoodReport {
             val previousMonth = month.minusMonths(1)
-            val moodsByLabel = Mood.entries.associateBy { it.label }
-            val entriesByDay = mutableMapOf<Int, MutableList<Pair<MoodEntry, Mood>>>()
+            val entriesByDay = mutableMapOf<Int, MutableList<Pair<MoodRecord, Mood>>>()
             val previousMoods = mutableListOf<Mood>()
 
             for (entry in entries) {
-                val mood = moodsByLabel[entry.moodType] ?: continue
+                val mood = entry.mood
                 val date = Instant.ofEpochMilli(entry.timestamp).atZone(zone).toLocalDate()
                 when (YearMonth.from(date)) {
                     month -> entriesByDay.getOrPut(date.dayOfMonth) { mutableListOf() }.add(entry to mood)

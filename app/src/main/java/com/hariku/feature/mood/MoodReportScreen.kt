@@ -33,7 +33,7 @@ import java.util.Locale
 private val indonesian = Locale.forLanguageTag("id-ID")
 
 @Composable
-fun MoodReportScreen(entries: List<MoodEntry>?) {
+fun MoodReportScreen(entries: List<MoodRecord>?) {
     if (entries == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()

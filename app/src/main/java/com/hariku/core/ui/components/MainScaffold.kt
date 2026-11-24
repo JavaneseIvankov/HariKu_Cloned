@@ -11,6 +11,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -32,7 +33,7 @@ import com.hariku.feature.chatbot.presentation.ChatbotScreen
 fun MainScaffold(
     parentNavController: NavHostController,
     initialTabIndex: Int = 0,
-    snackbarHostState: SnackbarHostState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     homeContent: @Composable () -> Unit,
     statisticContent: @Composable () -> Unit
 ) {
