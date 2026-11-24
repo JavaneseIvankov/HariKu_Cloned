@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -243,8 +245,12 @@ fun JournalHomeCard(
             ) {
                 Text(
                     text = "Mulai Refleksi Terpandu",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
+                    style = TextStyle(
+                        fontSize = 14.sp,
+                        lineHeight = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                    )
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(

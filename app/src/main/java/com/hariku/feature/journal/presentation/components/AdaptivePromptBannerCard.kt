@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,6 +37,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -48,6 +52,7 @@ import com.hariku.feature.journal.domain.model.JournalPromptRecommendation
 import com.hariku.feature.journal.presentation.JournalDesignTokens
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdaptivePromptBannerCard(
     recommendation: JournalPromptRecommendation,
@@ -183,12 +188,41 @@ fun AdaptivePromptBannerCard(
                         color = JournalDesignTokens.TextPrimary,
                         lineHeight = 19.sp
                     )
-                    Text(
-                        text = "Alur CBT: ${recommendation.sections.joinToString(" → ")}",
-                        fontSize = 11.sp,
-                        color = JournalDesignTokens.TextMuted,
-                        lineHeight = 15.sp
-                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Alur CBT:",
+                            style = TextStyle(
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = JournalDesignTokens.TextMuted,
+                                platformStyle = PlatformTextStyle(includeFontPadding = false)
+                            )
+                        )
+                        recommendation.sections.forEachIndexed { index, section ->
+                            Text(
+                                text = section,
+                                style = TextStyle(
+                                    fontSize = 11.sp,
+                                    lineHeight = 15.sp,
+                                    color = JournalDesignTokens.TextMuted,
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                )
+                            )
+                            if (index < recommendation.sections.lastIndex) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = JournalDesignTokens.TextMuted,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -209,8 +243,12 @@ fun AdaptivePromptBannerCard(
                 ) {
                     Text(
                         text = "Mulai Refleksi",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            platformStyle = PlatformTextStyle(includeFontPadding = false)
+                        )
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Icon(

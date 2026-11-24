@@ -41,6 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -161,13 +163,14 @@ internal fun JournalEditorStepSection(
                         value = state.title,
                         onValueChange = onTitleChange,
                         enabled = !state.isSaving,
-                        singleLine = true,
+                        singleLine = false,
+                        maxLines = 2,
                         isError = state.titleError != null,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         placeholder = {
                             Text(
-                                text = "Masukkan judul jurnal...",
+                                text = "Tulis judul singkat jurnalmu...",
                                 fontSize = 14.sp,
                                 color = JournalDesignTokens.TextSecondary.copy(alpha = 0.7f)
                             )
@@ -261,35 +264,46 @@ internal fun JournalEditorStepSection(
                         .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.AutoAwesome,
-                                contentDescription = null,
-                                tint = JournalDesignTokens.PrimaryCta,
-                                modifier = Modifier.size(16.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = JournalDesignTokens.PrimaryCta,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Panduan CBT",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = JournalDesignTokens.PrimaryCta
+                                )
+                            }
                             Text(
-                                text = "Panduan CBT: ${state.selectedTemplate.title}",
+                                text = "Ganti",
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = JournalDesignTokens.TextPrimary
+                                fontWeight = FontWeight.SemiBold,
+                                color = JournalDesignTokens.PrimaryCta,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable(enabled = !state.isSaving, onClick = onOpenTemplateSheet)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                         Text(
-                            text = "Ganti",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = JournalDesignTokens.PrimaryCta,
-                            modifier = Modifier.clickable(enabled = !state.isSaving, onClick = onOpenTemplateSheet)
+                            text = state.selectedTemplate.title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = JournalDesignTokens.TextPrimary,
+                            lineHeight = 19.sp
                         )
                     }
 
@@ -303,29 +317,36 @@ internal fun JournalEditorStepSection(
                         )
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         state.selectedTemplate.sections.forEachIndexed { index, section ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(18.dp)
+                                        .size(22.dp)
                                         .background(JournalDesignTokens.PeachHighlight, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = "${index + 1}",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = JournalDesignTokens.PrimaryCta
+                                        style = TextStyle(
+                                            fontSize = 11.sp,
+                                            lineHeight = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = JournalDesignTokens.PrimaryCta,
+                                            platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                        ),
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                                 Text(
                                     text = section,
                                     fontSize = 12.sp,
-                                    color = JournalDesignTokens.TextSecondary
+                                    color = JournalDesignTokens.TextSecondary,
+                                    lineHeight = 18.sp,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }

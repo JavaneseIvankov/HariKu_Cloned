@@ -194,14 +194,8 @@ class GuidedJournalEditorViewModel(
 
     fun onSelectPrompt(prompt: String) {
         _uiState.update { state ->
-            val nextTitle = if (state.title.isBlank()) {
-                deriveTitleFromPrompt(prompt, state.selectedTemplate)
-            } else {
-                state.title
-            }
             state.copy(
                 selectedPrompt = prompt,
-                title = nextTitle,
                 titleError = null,
                 currentStep = GuidedJournalStep.EDITOR
             )
@@ -469,17 +463,6 @@ class GuidedJournalEditorViewModel(
         }
 
         return listOf(personalizedPrompt) + baseQuestions
-    }
-
-    private fun deriveTitleFromPrompt(prompt: String, template: CbtTemplateType): String {
-        val clean = prompt.replace("?", "").trim()
-        if (clean.length <= SaveJournalEntryUseCase.MAX_TITLE_LENGTH) {
-            return clean
-        }
-        val prefix = "${template.title}: "
-        val remaining = SaveJournalEntryUseCase.MAX_TITLE_LENGTH - prefix.length
-        val truncated = clean.take(remaining).substringBeforeLast(' ').ifBlank { clean.take(remaining) }
-        return (prefix + truncated).take(SaveJournalEntryUseCase.MAX_TITLE_LENGTH)
     }
 
     private fun buildFinalContentWithCheckIn(
