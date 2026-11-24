@@ -9,6 +9,7 @@ import com.hariku.feature.mood.domain.model.MoodType
 import com.hariku.feature.mood.domain.usecase.DeleteMoodEntryUseCase
 import com.hariku.feature.mood.domain.usecase.ObserveMoodEntriesUseCase
 import com.hariku.feature.mood.domain.usecase.SaveQuickMoodUseCase
+import com.hariku.feature.mood.domain.usecase.UpdateMoodEntryUseCase
 import com.hariku.feature.mood.presentation.MoodBurstStyle
 import com.hariku.feature.mood.presentation.MoodTapMotionCatalog
 import com.hariku.feature.mood.presentation.QuickMoodUiState
@@ -88,11 +89,12 @@ class QuickMoodTrackerTest {
     }
 
     @Test
-    fun saveObserveAndDeleteFlowWorksEndToEndWithFakeDao() = runBlocking {
+    fun saveObserveUpdateAndDeleteFlowWorksEndToEndWithFakeDao() = runBlocking {
         val fakeDao = FakeMoodDao()
         val repository = MoodRepositoryImpl(fakeDao)
         val observeUseCase = ObserveMoodEntriesUseCase(repository)
         val saveUseCase = SaveQuickMoodUseCase(repository)
+        val updateUseCase = UpdateMoodEntryUseCase(repository)
         val deleteUseCase = DeleteMoodEntryUseCase(repository)
 
         val timestamp = sampleDate.atTime(9, 15).atZone(jakartaZone).toInstant().toEpochMilli()
@@ -113,6 +115,19 @@ class QuickMoodTrackerTest {
         assertEquals(savedId, observed.first().id)
         assertEquals(MoodType.SENANG, observed.first().mood)
         assertEquals("Pagi yang produktif", observed.first().note)
+
+        val updateResult = updateUseCase(
+            entryId = savedId,
+            mood = MoodType.SEMANGAT,
+            note = "   Presentasi berjalan lancar   "
+        )
+        assertTrue(updateResult.isSuccess)
+
+        val afterUpdate = observeUseCase().first()
+        assertEquals(1, afterUpdate.size)
+        assertEquals(MoodType.SEMANGAT, afterUpdate.first().mood)
+        assertEquals("Presentasi berjalan lancar", afterUpdate.first().note)
+        assertEquals(timestamp, afterUpdate.first().timestamp)
 
         val deleteResult = deleteUseCase(savedId)
         assertTrue(deleteResult.isSuccess)
@@ -200,6 +215,79 @@ class QuickMoodTrackerTest {
         assertEquals(MoodBurstStyle.SOFT_RIPPLE, MoodTapMotionCatalog.specFor(MoodType.LELAH).burstStyle)
     }
 
+    @Test
+    fun computeStreakCountsConsecutiveDaysAndCarriesOverYesterday() {
+        fun entryOn(daysOffset: Long, hour: Int = 10): MoodEntry = MoodEntry(
+            id = daysOffset + 100L,
+            mood = MoodType.SENANG,
+            timestamp = sampleDate.plusDays(daysOffset).atTime(hour, 0).atZone(jakartaZone).toInstant().toEpochMilli()
+        )
+
+        val emptyStreak = MoodTrackerLogic.computeStreak(emptyList(), today = sampleDate, zone = jakartaZone)
+        assertEquals(0, emptyStreak.currentDays)
+        assertFalse(emptyStreak.checkedInToday)
+
+        // Multiple entries on today + yesterday + two days ago = 3-day streak checked in today
+        val threeDayActive = MoodTrackerLogic.computeStreak(
+            entries = listOf(entryOn(0, 8), entryOn(0, 20), entryOn(-1), entryOn(-2), entryOn(-5)),
+            today = sampleDate,
+            zone = jakartaZone
+        )
+        assertEquals(3, threeDayActive.currentDays)
+        assertTrue(threeDayActive.checkedInToday)
+
+        // Yesterday + two days ago, nothing today yet = 2-day streak waiting for today's check-in
+        val pendingToday = MoodTrackerLogic.computeStreak(
+            entries = listOf(entryOn(-1), entryOn(-2)),
+            today = sampleDate,
+            zone = jakartaZone
+        )
+        assertEquals(2, pendingToday.currentDays)
+        assertFalse(pendingToday.checkedInToday)
+
+        // Missed yesterday breaks the streak
+        val broken = MoodTrackerLogic.computeStreak(
+            entries = listOf(entryOn(-2), entryOn(-3)),
+            today = sampleDate,
+            zone = jakartaZone
+        )
+        assertEquals(0, broken.currentDays)
+        assertFalse(broken.checkedInToday)
+
+        // Future timestamps should not count toward today's streak
+        val futureOnly = MoodTrackerLogic.computeStreak(
+            entries = listOf(entryOn(1)),
+            today = sampleDate,
+            zone = jakartaZone
+        )
+        assertEquals(0, futureOnly.currentDays)
+        assertFalse(futureOnly.checkedInToday)
+    }
+
+    @Test
+    fun toggleContextTagAddsRemovesAndRespectsMaxLength() {
+        val step1 = MoodTrackerLogic.toggleContextTag("", "Kuliah")
+        assertEquals("Kuliah", step1)
+        assertTrue(MoodTrackerLogic.hasContextTag(step1, "kuliah"))
+
+        val step2 = MoodTrackerLogic.toggleContextTag(step1, "Tugas")
+        assertEquals("Kuliah, Tugas", step2)
+        assertTrue(MoodTrackerLogic.hasContextTag(step2, "Tugas"))
+
+        val step3 = MoodTrackerLogic.toggleContextTag(step2, "Kuliah")
+        assertEquals("Tugas", step3)
+        assertFalse(MoodTrackerLogic.hasContextTag(step3, "Kuliah"))
+
+        val step4 = MoodTrackerLogic.toggleContextTag(step3, "Tugas")
+        assertEquals("", step4)
+
+        val mixed = MoodTrackerLogic.toggleContextTag("Capek setelah praktikum", "Kurang tidur")
+        assertEquals("Capek setelah praktikum, Kurang tidur", mixed)
+
+        val nearLimit = "a".repeat(MoodTrackerLogic.MAX_NOTE_LENGTH - 3)
+        assertEquals(nearLimit, MoodTrackerLogic.toggleContextTag(nearLimit, "Istirahat"))
+    }
+
     private class FakeMoodDao : MoodDao {
         private var nextId = 1L
         private val items = MutableStateFlow<List<MoodEntryEntity>>(emptyList())
@@ -213,6 +301,12 @@ class QuickMoodTrackerTest {
         }
 
         override fun observeEntries(): Flow<List<MoodEntryEntity>> = items
+
+        override suspend fun updateById(entryId: Long, moodType: String, note: String) {
+            items.value = items.value.map { entry ->
+                if (entry.id == entryId) entry.copy(moodType = moodType, note = note) else entry
+            }
+        }
 
         override suspend fun deleteById(entryId: Long) {
             items.value = items.value.filterNot { it.id == entryId }

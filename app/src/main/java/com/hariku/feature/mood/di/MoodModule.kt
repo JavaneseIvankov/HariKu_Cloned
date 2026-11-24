@@ -6,6 +6,7 @@ import com.hariku.feature.mood.domain.repository.MoodRepository
 import com.hariku.feature.mood.domain.usecase.DeleteMoodEntryUseCase
 import com.hariku.feature.mood.domain.usecase.ObserveMoodEntriesUseCase
 import com.hariku.feature.mood.domain.usecase.SaveQuickMoodUseCase
+import com.hariku.feature.mood.domain.usecase.UpdateMoodEntryUseCase
 import com.hariku.feature.mood.presentation.QuickMoodViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
@@ -19,12 +20,14 @@ val moodModule = module {
     factory { ObserveMoodEntriesUseCase(repository = get()) }
     factory { SaveQuickMoodUseCase(repository = get()) }
     factory { DeleteMoodEntryUseCase(repository = get()) }
+    factory { UpdateMoodEntryUseCase(repository = get()) }
 
     viewModel {
         QuickMoodViewModel(
             observeMoodEntriesUseCase = get(),
             saveQuickMoodUseCase = get(),
-            deleteMoodEntryUseCase = get()
+            deleteMoodEntryUseCase = get(),
+            updateMoodEntryUseCase = get()
         )
     }
 }

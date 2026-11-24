@@ -13,5 +13,11 @@ interface MoodRepository {
         timestamp: Long = System.currentTimeMillis()
     ): Result<Long>
 
+    suspend fun updateMood(
+        entryId: Long,
+        mood: MoodType,
+        note: String
+    ): Result<Unit>
+
     suspend fun deleteMood(entryId: Long): Result<Unit>
 }

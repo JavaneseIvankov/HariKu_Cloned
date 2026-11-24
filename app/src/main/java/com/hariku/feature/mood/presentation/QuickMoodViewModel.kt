@@ -3,11 +3,13 @@ package com.hariku.feature.mood.presentation
 import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hariku.feature.mood.domain.model.MoodEntry
 import com.hariku.feature.mood.domain.model.MoodTrackerLogic
 import com.hariku.feature.mood.domain.model.MoodType
 import com.hariku.feature.mood.domain.usecase.DeleteMoodEntryUseCase
 import com.hariku.feature.mood.domain.usecase.ObserveMoodEntriesUseCase
 import com.hariku.feature.mood.domain.usecase.SaveQuickMoodUseCase
+import com.hariku.feature.mood.domain.usecase.UpdateMoodEntryUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +24,7 @@ class QuickMoodViewModel(
     private val observeMoodEntriesUseCase: ObserveMoodEntriesUseCase,
     private val saveQuickMoodUseCase: SaveQuickMoodUseCase,
     private val deleteMoodEntryUseCase: DeleteMoodEntryUseCase,
+    private val updateMoodEntryUseCase: UpdateMoodEntryUseCase,
     private val todayProvider: () -> LocalDate = { LocalDate.now() },
     private val nowProvider: () -> Long = { System.currentTimeMillis() },
     private val zoneId: ZoneId = ZoneId.systemDefault()
@@ -55,6 +58,16 @@ class QuickMoodViewModel(
         }
     }
 
+    fun onToggleQuickTag(tagLabel: String) {
+        if (_uiState.value.isSaving) return
+        _uiState.update { state ->
+            state.copy(
+                noteInput = MoodTrackerLogic.toggleContextTag(state.noteInput, tagLabel),
+                actionError = null
+            )
+        }
+    }
+
     fun onToggleHistory() {
         _uiState.update { state ->
             val nextExpanded = !state.isHistoryExpanded
@@ -75,6 +88,103 @@ class QuickMoodViewModel(
         _uiState.update { state ->
             val maxPage = (state.totalHistoryPages - 1).coerceAtLeast(0)
             state.copy(historyPage = (state.currentHistoryPage + 1).coerceAtMost(maxPage))
+        }
+    }
+
+    fun onStartEditEntry(entry: MoodEntry) {
+        if (_uiState.value.isSaving) return
+        _uiState.update { state ->
+            state.copy(
+                editingEntry = entry,
+                editMood = entry.mood,
+                editNote = entry.note,
+                actionError = null
+            )
+        }
+    }
+
+    fun onEditMoodSelected(mood: MoodType) {
+        _uiState.update { state ->
+            state.copy(editMood = mood, actionError = null)
+        }
+    }
+
+    fun onEditNoteChanged(value: String) {
+        _uiState.update { state ->
+            state.copy(
+                editNote = value.take(MoodTrackerLogic.MAX_NOTE_LENGTH),
+                actionError = null
+            )
+        }
+    }
+
+    fun onToggleEditQuickTag(tagLabel: String) {
+        if (_uiState.value.isSaving) return
+        _uiState.update { state ->
+            state.copy(
+                editNote = MoodTrackerLogic.toggleContextTag(state.editNote, tagLabel),
+                actionError = null
+            )
+        }
+    }
+
+    fun onDismissEditEntry() {
+        if (_uiState.value.isSaving) return
+        _uiState.update { state ->
+            state.copy(
+                editingEntry = null,
+                editMood = null,
+                editNote = "",
+                actionError = null
+            )
+        }
+    }
+
+    fun onConfirmEditEntry() {
+        val current = _uiState.value
+        val targetEntry = current.editingEntry ?: return
+        if (current.isSaving) return
+
+        val targetMood = current.editMood ?: targetEntry.mood
+        val targetNote = current.editNote
+
+        _uiState.update { state ->
+            state.copy(
+                isSaving = true,
+                actionError = null,
+                feedbackMessage = null
+            )
+        }
+
+        viewModelScope.launch {
+            updateMoodEntryUseCase(
+                entryId = targetEntry.id,
+                mood = targetMood,
+                note = targetNote
+            ).fold(
+                onSuccess = {
+                    _uiState.update { state ->
+                        val clearedUndo = if (state.lastSavedEntryId == targetEntry.id) null else state.lastSavedEntryId
+                        state.copy(
+                            isSaving = false,
+                            editingEntry = null,
+                            editMood = null,
+                            editNote = "",
+                            lastSavedEntryId = clearedUndo,
+                            feedbackMessage = "Catatan mood ${targetMood.label} diperbarui",
+                            actionError = null
+                        )
+                    }
+                },
+                onFailure = {
+                    _uiState.update { state ->
+                        state.copy(
+                            isSaving = false,
+                            actionError = "Catatan mood gagal diperbarui. Coba lagi."
+                        )
+                    }
+                }
+            )
         }
     }
 
@@ -136,8 +246,12 @@ class QuickMoodViewModel(
                 onSuccess = {
                     _uiState.update { state ->
                         val clearedUndo = if (state.lastSavedEntryId == entryId) null else state.lastSavedEntryId
+                        val clearedEditing = state.editingEntry?.id == entryId
                         state.copy(
                             isSaving = false,
+                            editingEntry = if (clearedEditing) null else state.editingEntry,
+                            editMood = if (clearedEditing) null else state.editMood,
+                            editNote = if (clearedEditing) "" else state.editNote,
                             lastSavedEntryId = clearedUndo,
                             feedbackMessage = if (fromUndo) "Catatan mood dibatalkan" else "Catatan mood dihapus"
                         )
@@ -196,6 +310,8 @@ class QuickMoodViewModel(
                             loadError = null,
                             latestTodayEntry = summary.latestEntry,
                             todayEntries = summary.todayEntries,
+                            streakDays = summary.streak.currentDays,
+                            hasCheckedInToday = summary.streak.checkedInToday,
                             historyPage = clampedPage
                         )
                     }

@@ -1,16 +1,22 @@
 package com.hariku.feature.mood.presentation
 
 import com.hariku.feature.mood.domain.model.MoodEntry
+import com.hariku.feature.mood.domain.model.MoodType
 
 data class QuickMoodUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val latestTodayEntry: MoodEntry? = null,
     val todayEntries: List<MoodEntry> = emptyList(),
+    val streakDays: Int = 0,
+    val hasCheckedInToday: Boolean = false,
     val noteInput: String = "",
     val isNoteExpanded: Boolean = false,
     val isHistoryExpanded: Boolean = false,
     val historyPage: Int = 0,
+    val editingEntry: MoodEntry? = null,
+    val editMood: MoodType? = null,
+    val editNote: String = "",
     val feedbackMessage: String? = null,
     val lastSavedEntryId: Long? = null,
     val loadError: String? = null,

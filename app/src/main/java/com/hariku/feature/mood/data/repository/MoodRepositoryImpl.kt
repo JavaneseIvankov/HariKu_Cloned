@@ -43,6 +43,21 @@ class MoodRepositoryImpl(
         Result.failure(error)
     }
 
+    override suspend fun updateMood(
+        entryId: Long,
+        mood: MoodType,
+        note: String
+    ): Result<Unit> = try {
+        moodDao.updateById(
+            entryId = entryId,
+            moodType = mood.label,
+            note = note
+        )
+        Result.success(Unit)
+    } catch (error: SQLiteException) {
+        Result.failure(error)
+    }
+
     override suspend fun deleteMood(entryId: Long): Result<Unit> = try {
         moodDao.deleteById(entryId)
         Result.success(Unit)
