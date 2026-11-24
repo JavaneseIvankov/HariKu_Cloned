@@ -6,12 +6,15 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.FirebaseApp
 import com.hariku.core.ui.components.MainScaffold
 import com.hariku.core.ui.components.Routes
 import com.google.firebase.auth.FirebaseAuth
@@ -60,8 +63,14 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
         route == Routes.Senses.route
     LaunchedEffect(showSos) { onSosVisibilityChanged(showSos) }
     // With no cached session the app opens on the auth screen; a restored
-    // session goes straight to the home destination.
-    val startDestination = if (FirebaseAuth.getInstance().currentUser != null) {
+    // session goes straight to the home destination. When Firebase is not
+    // configured locally (missing app/google-services.json), open Home so
+    // offline features like Quick Mood Tracker and SOS remain runnable.
+    val context = LocalContext.current
+    val isFirebaseConfigured = remember(context) {
+        FirebaseApp.getApps(context).isNotEmpty()
+    }
+    val startDestination = if (!isFirebaseConfigured || FirebaseAuth.getInstance().currentUser != null) {
         Routes.Home.route
     } else {
         Routes.Login.route

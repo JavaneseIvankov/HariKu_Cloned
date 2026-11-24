@@ -18,7 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,13 +42,15 @@ import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.ui.components.Routes
 import com.hariku.core.ui.theme.HariKuTheme
+import com.hariku.feature.mood.presentation.QuickMoodTrackerCard
+import com.hariku.feature.mood.presentation.QuickMoodTrackerSection
+import com.hariku.feature.mood.presentation.QuickMoodUiState
 import org.koin.androidx.compose.koinViewModel
 
 private val HomeCanvas = Color(0xFFFDF8F3)
 private val HomeInk = Color(0xFF352C28)
 private val HomeMuted = Color(0xFF74665E)
 private val HomeAccent = Color(0xFFC97D50)
-private val HomeSage = Color(0xFFEAF1E8)
 private val HomeBlue = Color(0xFFE9F0F7)
 
 @Composable
@@ -64,7 +66,8 @@ fun HomeScreen(
         photoUrl = user?.photoUrl,
         onOpenProfile = onOpenProfile,
         onOpenSos = onOpenSos,
-        onOpenChat = { navController.navigate(Routes.CustomizeCat.route) }
+        onOpenChat = { navController.navigate(Routes.CustomizeCat.route) },
+        moodTrackerContent = { QuickMoodTrackerSection() }
     )
 }
 
@@ -74,7 +77,8 @@ private fun HomeContent(
     photoUrl: String?,
     onOpenProfile: () -> Unit,
     onOpenSos: () -> Unit,
-    onOpenChat: () -> Unit
+    onOpenChat: () -> Unit,
+    moodTrackerContent: @Composable () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -142,17 +146,12 @@ private fun HomeContent(
                 ) {
                     Text("Mulai percakapan")
                     Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
             }
         }
         item {
-            PlaceholderSection(
-                title = "Suasana hati",
-                owner = "Quick Mood Tracker · Raditya",
-                message = "Pencatatan suasana hati akan tersedia di bagian ini.",
-                tint = HomeSage
-            )
+            moodTrackerContent()
         }
         item {
             PlaceholderSection(
@@ -206,7 +205,20 @@ private fun HomePreview() {
             photoUrl = null,
             onOpenProfile = {},
             onOpenSos = {},
-            onOpenChat = {}
+            onOpenChat = {},
+            moodTrackerContent = {
+                QuickMoodTrackerCard(
+                    state = QuickMoodUiState(isLoading = false),
+                    onSelectMood = {},
+                    onNoteInputChanged = {},
+                    onToggleNoteInput = {},
+                    onToggleHistory = {},
+                    onUndoLastSaved = {},
+                    onDeleteEntry = {},
+                    onDismissFeedback = {},
+                    onRetryLoad = {}
+                )
+            }
         )
     }
 }
