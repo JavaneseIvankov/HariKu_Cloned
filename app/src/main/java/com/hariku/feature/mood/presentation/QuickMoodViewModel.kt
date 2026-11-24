@@ -57,7 +57,24 @@ class QuickMoodViewModel(
 
     fun onToggleHistory() {
         _uiState.update { state ->
-            state.copy(isHistoryExpanded = !state.isHistoryExpanded)
+            val nextExpanded = !state.isHistoryExpanded
+            state.copy(
+                isHistoryExpanded = nextExpanded,
+                historyPage = if (nextExpanded) state.historyPage else 0
+            )
+        }
+    }
+
+    fun onPreviousHistoryPage() {
+        _uiState.update { state ->
+            state.copy(historyPage = (state.currentHistoryPage - 1).coerceAtLeast(0))
+        }
+    }
+
+    fun onNextHistoryPage() {
+        _uiState.update { state ->
+            val maxPage = (state.totalHistoryPages - 1).coerceAtLeast(0)
+            state.copy(historyPage = (state.currentHistoryPage + 1).coerceAtMost(maxPage))
         }
     }
 
@@ -86,6 +103,7 @@ class QuickMoodViewModel(
                             isSaving = false,
                             noteInput = "",
                             isNoteExpanded = false,
+                            historyPage = 0,
                             feedbackMessage = "Mood ${mood.label} tersimpan",
                             lastSavedEntryId = insertedId,
                             actionError = null
@@ -169,11 +187,16 @@ class QuickMoodViewModel(
                         zone = zoneId
                     )
                     _uiState.update { state ->
+                        val clampedPage = QuickMoodUiState.clampHistoryPage(
+                            page = state.historyPage,
+                            itemCount = summary.todayEntries.size
+                        )
                         state.copy(
                             isLoading = false,
                             loadError = null,
                             latestTodayEntry = summary.latestEntry,
-                            todayEntries = summary.todayEntries
+                            todayEntries = summary.todayEntries,
+                            historyPage = clampedPage
                         )
                     }
                 }

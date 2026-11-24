@@ -9,11 +9,13 @@ import com.hariku.feature.mood.domain.model.MoodType
 import com.hariku.feature.mood.domain.usecase.DeleteMoodEntryUseCase
 import com.hariku.feature.mood.domain.usecase.ObserveMoodEntriesUseCase
 import com.hariku.feature.mood.domain.usecase.SaveQuickMoodUseCase
+import com.hariku.feature.mood.presentation.QuickMoodUiState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -113,6 +115,44 @@ class QuickMoodTrackerTest {
         val deleteResult = deleteUseCase(savedId)
         assertTrue(deleteResult.isSuccess)
         assertTrue(observeUseCase().first().isEmpty())
+    }
+
+    @Test
+    fun historyPaginationSlicesFiveItemsPerPageAndClampsOutOfRangePages() {
+        val baseMillis = sampleDate.atTime(10, 0).atZone(jakartaZone).toInstant().toEpochMilli()
+        val twelveEntries = (1L..12L).map { id ->
+            MoodEntry(id = id, mood = MoodType.BIASA, timestamp = baseMillis + id * 1000L)
+        }
+
+        val pageZero = QuickMoodUiState(isLoading = false, todayEntries = twelveEntries, historyPage = 0)
+        assertEquals(3, pageZero.totalHistoryPages)
+        assertEquals(0, pageZero.currentHistoryPage)
+        assertEquals(listOf(1L, 2L, 3L, 4L, 5L), pageZero.pagedTodayEntries.map { it.id })
+        assertFalse(pageZero.canGoToPreviousHistoryPage)
+        assertTrue(pageZero.canGoToNextHistoryPage)
+
+        val pageOne = pageZero.copy(historyPage = 1)
+        assertEquals(listOf(6L, 7L, 8L, 9L, 10L), pageOne.pagedTodayEntries.map { it.id })
+        assertTrue(pageOne.canGoToPreviousHistoryPage)
+        assertTrue(pageOne.canGoToNextHistoryPage)
+
+        val lastPage = pageZero.copy(historyPage = 2)
+        assertEquals(listOf(11L, 12L), lastPage.pagedTodayEntries.map { it.id })
+        assertTrue(lastPage.canGoToPreviousHistoryPage)
+        assertFalse(lastPage.canGoToNextHistoryPage)
+
+        // Simulates deleting entries while viewing page 2 so only 5 entries (1 page) remain.
+        val shrunk = lastPage.copy(todayEntries = twelveEntries.take(5))
+        assertEquals(1, shrunk.totalHistoryPages)
+        assertEquals(0, shrunk.currentHistoryPage)
+        assertEquals(listOf(1L, 2L, 3L, 4L, 5L), shrunk.pagedTodayEntries.map { it.id })
+        assertFalse(shrunk.canGoToPreviousHistoryPage)
+        assertFalse(shrunk.canGoToNextHistoryPage)
+
+        val empty = pageZero.copy(todayEntries = emptyList(), historyPage = 2)
+        assertEquals(1, empty.totalHistoryPages)
+        assertEquals(0, empty.currentHistoryPage)
+        assertTrue(empty.pagedTodayEntries.isEmpty())
     }
 
     private class FakeMoodDao : MoodDao {

@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
@@ -38,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +84,8 @@ fun QuickMoodTrackerSection(
         onNoteInputChanged = viewModel::onNoteInputChanged,
         onToggleNoteInput = viewModel::onToggleNoteInput,
         onToggleHistory = viewModel::onToggleHistory,
+        onPreviousHistoryPage = viewModel::onPreviousHistoryPage,
+        onNextHistoryPage = viewModel::onNextHistoryPage,
         onUndoLastSaved = viewModel::onUndoLastSaved,
         onDeleteEntry = viewModel::onDeleteEntry,
         onDismissFeedback = viewModel::onDismissFeedback,
@@ -100,7 +105,9 @@ fun QuickMoodTrackerCard(
     onDeleteEntry: (Long) -> Unit,
     onDismissFeedback: () -> Unit,
     onRetryLoad: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPreviousHistoryPage: () -> Unit = {},
+    onNextHistoryPage: () -> Unit = {}
 ) {
     val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
     val latestEntry = state.latestTodayEntry
@@ -399,12 +406,26 @@ fun QuickMoodTrackerCard(
 
                         AnimatedVisibility(visible = state.isHistoryExpanded) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                state.todayEntries.forEach { entry ->
-                                    TodayMoodRow(
-                                        entry = entry,
-                                        timeText = formatMoodTime(entry.timestamp, timeFormatter),
-                                        isDisabled = state.isSaving,
-                                        onDelete = { onDeleteEntry(entry.id) }
+                                state.pagedTodayEntries.forEach { entry ->
+                                    key(entry.id) {
+                                        TodayMoodRow(
+                                            entry = entry,
+                                            timeText = formatMoodTime(entry.timestamp, timeFormatter),
+                                            isDisabled = state.isSaving,
+                                            onDelete = { onDeleteEntry(entry.id) }
+                                        )
+                                    }
+                                }
+                                if (state.totalHistoryPages > 1) {
+                                    HistoryPaginationBar(
+                                        currentPage = state.currentHistoryPage,
+                                        totalPages = state.totalHistoryPages,
+                                        totalCount = state.todayCount,
+                                        pageSize = QuickMoodUiState.HISTORY_PAGE_SIZE,
+                                        canGoPrevious = state.canGoToPreviousHistoryPage,
+                                        canGoNext = state.canGoToNextHistoryPage,
+                                        onPrevious = onPreviousHistoryPage,
+                                        onNext = onNextHistoryPage
                                     )
                                 }
                             }
@@ -524,6 +545,84 @@ private fun TodayMoodRow(
                 modifier = Modifier.size(18.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun HistoryPaginationBar(
+    currentPage: Int,
+    totalPages: Int,
+    totalCount: Int,
+    pageSize: Int,
+    canGoPrevious: Boolean,
+    canGoNext: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    val startNumber = currentPage * pageSize + 1
+    val endNumber = ((currentPage + 1) * pageSize).coerceAtMost(totalCount)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Menampilkan $startNumber–$endNumber dari $totalCount",
+            fontSize = 11.sp,
+            color = MoodMuted
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            PaginationStepButton(
+                icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = "Halaman sebelumnya",
+                enabled = canGoPrevious,
+                onClick = onPrevious
+            )
+            Text(
+                text = "${currentPage + 1} / $totalPages",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MoodInk,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            PaginationStepButton(
+                icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Halaman berikutnya",
+                enabled = canGoNext,
+                onClick = onNext
+            )
+        }
+    }
+}
+
+@Composable
+private fun PaginationStepButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (enabled) MoodWarmSoft else Color(0xFFF5F0EC))
+            .alpha(if (enabled) 1f else 0.45f)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (enabled) MoodAccent else MoodMuted,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 
