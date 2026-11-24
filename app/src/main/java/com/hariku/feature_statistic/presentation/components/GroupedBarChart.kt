@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.sqrt
 
 @Composable
 fun GroupedBarChart(data: List<WeeklyData>) {
@@ -37,21 +38,26 @@ fun GroupedBarChart(data: List<WeeklyData>) {
     val datePaint = remember(axisPaint) {
         Paint(axisPaint).apply { textAlign = Paint.Align.CENTER }
     }
+    val dateAngle = 45f
+    val dateHeight = datePaint.descent() - datePaint.ascent()
+    val widestDate = data.maxOf { datePaint.measureText(it.dateLabel) }
+    // At 45 degrees, the rotated label bounds occupy the same width and height.
+    val rotatedDateSize = (widestDate + dateHeight) / sqrt(2f)
+    val dateSpace = with(density) { rotatedDateSize.toDp() } + 18.dp
     val axisWidth = with(density) { axisPaint.measureText("100%").toDp() } + 8.dp
-    val minWeekWidth = with(density) {
-        data.maxOf { datePaint.measureText(it.dateLabel) }.toDp()
-    } + 12.dp
+    val minWeekWidth = maxOf(48.dp, with(density) { rotatedDateSize.toDp() } + 12.dp)
 
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val chartWidth = maxOf(maxWidth, axisWidth + minWeekWidth * data.size + 4.dp)
-        val chartHeight = (maxWidth * 0.75f).coerceIn(180.dp, 260.dp)
+        val chartHeight = (maxWidth * 0.67f).coerceIn(150.dp, 230.dp) + dateSpace
         Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             Canvas(Modifier.width(chartWidth).height(chartHeight)) {
                 val labelCenterToBaseline = -(axisPaint.ascent() + axisPaint.descent()) / 2
                 val plotLeft = axisWidth.toPx()
                 val plotRight = size.width - 4.dp.toPx()
                 val plotTop = labelSize
-                val plotBottom = size.height - 26.dp.toPx() - labelSize
+                val plotBottom = size.height - dateSpace.toPx()
+                val dateCenterY = plotBottom + 10.dp.toPx() + rotatedDateSize / 2
                 val plotHeight = plotBottom - plotTop
                 if (plotHeight <= 0f) return@Canvas
 
@@ -74,7 +80,7 @@ fun GroupedBarChart(data: List<WeeklyData>) {
 
                 val weekWidth = (plotRight - plotLeft) / data.size
                 val gap = 2.dp.toPx()
-                val barWidth = ((weekWidth * 0.74f - 2 * gap) / 3).coerceIn(1f, 20.dp.toPx())
+                val barWidth = ((weekWidth * 0.86f - 2 * gap) / 3).coerceIn(1f, 32.dp.toPx())
                 data.forEachIndexed { index, week ->
                     val center = plotLeft + (index + 0.5f) * weekWidth
                     fun drawBar(value: Float, slot: Int, color: Color) {
@@ -91,10 +97,14 @@ fun GroupedBarChart(data: List<WeeklyData>) {
                     drawBar(week.negative, -1, BarColorNegative)
                     drawBar(week.positive, 0, BarColorPositive)
                     drawBar(week.neutral, 1, BarColorNeutral)
-                    drawIntoCanvas {
-                        it.nativeCanvas.drawText(
-                            week.dateLabel, center, plotBottom + labelSize + 6.dp.toPx(), datePaint
+                    drawIntoCanvas { canvas ->
+                        val nativeCanvas = canvas.nativeCanvas
+                        val checkpoint = nativeCanvas.save()
+                        nativeCanvas.rotate(dateAngle, center, dateCenterY)
+                        nativeCanvas.drawText(
+                            week.dateLabel, center, dateCenterY + labelCenterToBaseline, datePaint
                         )
+                        nativeCanvas.restoreToCount(checkpoint)
                     }
                 }
             }
