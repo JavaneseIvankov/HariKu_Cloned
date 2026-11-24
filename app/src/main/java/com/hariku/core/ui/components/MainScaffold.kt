@@ -2,12 +2,16 @@ package com.hariku.core.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -23,15 +27,15 @@ import com.hariku.feature.chatbot.presentation.ChatbotScreen
  * the bottom navigation drives an inner NavHost while feature screens receive
  * the parent controller so they can push full-screen destinations on top.
  *
- * Journal and Statistic are not implemented yet. They are stand-ins here so
- * the tab order and navigation behaviour already match upstream; the owning
- * features only need to replace the two placeholder composables.
+ * Journal uses a placeholder until its screen is available.
  */
 @Composable
 fun MainScaffold(
     parentNavController: NavHostController,
     initialTabIndex: Int = 0,
-    homeContent: @Composable () -> Unit
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    homeContent: @Composable () -> Unit,
+    statisticContent: @Composable () -> Unit
 ) {
     val bottomNavController = rememberNavController()
     val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
@@ -51,6 +55,7 @@ fun MainScaffold(
         .takeIf { it >= 0 } ?: initialTabIndex
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             BottomNavBar(
                 selectedIndex = selectedIndex,
@@ -74,7 +79,7 @@ fun MainScaffold(
         NavHost(
             navController = bottomNavController,
             startDestination = startDestination,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding)
         ) {
             composable(Routes.Home.route) {
                 homeContent()
@@ -89,10 +94,7 @@ fun MainScaffold(
                 )
             }
             composable(Routes.Statistic.route) {
-                PlaceholderTab(
-                    title = "Statistik",
-                    message = "Fitur statistik belum tersedia."
-                )
+                statisticContent()
             }
         }
     }

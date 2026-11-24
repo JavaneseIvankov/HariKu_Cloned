@@ -51,7 +51,6 @@ private val HomeCanvas = Color(0xFFFDF8F3)
 private val HomeInk = Color(0xFF352C28)
 private val HomeMuted = Color(0xFF74665E)
 private val HomeAccent = Color(0xFFC97D50)
-private val HomeBlue = Color(0xFFE9F0F7)
 
 @Composable
 fun HomeScreen(
@@ -159,14 +158,6 @@ private fun HomeContent(
                 owner = "Guided Journaling · Yoga",
                 message = "Prompt dan jurnal harian akan tersedia di bagian ini.",
                 tint = Color(0xFFF9EEE5)
-            )
-        }
-        item {
-            PlaceholderSection(
-                title = "Ringkasan suasana hati",
-                owner = "Mood Analytics & Reporting · Bagas",
-                message = "Ringkasan dan laporan akan tersedia di bagian ini.",
-                tint = HomeBlue
             )
         }
         item {

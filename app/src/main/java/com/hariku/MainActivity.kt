@@ -29,6 +29,7 @@ import com.hariku.feature.chatbot.presentation.detail.ChatbotDetailScreen
 import com.hariku.feature.sos.SosScreen
 import com.hariku.feature.sos.SosProfessionalScreen
 import com.hariku.feature.home.presentation.HomeScreen
+import com.hariku.feature_statistic.presentation.StatisticScreen
 import com.hariku.feature.profile.presentation.ProfileScreen
 
 class MainActivity : ComponentActivity() {
@@ -104,6 +105,11 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
                     HomeScreen(
                         navController = navController,
                         onOpenProfile = { navController.navigate(Routes.Profile.route) },
+                        onOpenSos = { navController.navigate(Routes.SosGraph.route) }
+                    )
+                },
+                statisticContent = {
+                    StatisticScreen(
                         onOpenSos = { navController.navigate(Routes.SosGraph.route) }
                     )
                 }
