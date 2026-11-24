@@ -12,7 +12,11 @@ import com.hariku.feature.journal.domain.usecase.GetJournalByIdUseCase
 import com.hariku.feature.journal.domain.usecase.ObserveJournalEntriesUseCase
 import com.hariku.feature.journal.domain.usecase.SaveJournalEntryUseCase
 import com.hariku.feature.journal.domain.usecase.TogglePinJournalUseCase
+import com.hariku.feature.journal.presentation.JournalViewModel
+import com.hariku.feature.journal.presentation.create.GuidedJournalEditorViewModel
+import com.hariku.feature.journal.presentation.detail.JournalDetailViewModel
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val journalModule = module {
@@ -41,28 +45,26 @@ val journalModule = module {
         )
     }
 
-    // Definisi ViewModel disiapkan untuk Fase 3 (Presentation Layer):
-    // import org.koin.core.module.dsl.viewModel
-    // viewModel {
-    //     JournalViewModel(
-    //         observeJournalEntriesUseCase = get(),
-    //         getAdaptivePromptUseCase = get(),
-    //         togglePinJournalUseCase = get(),
-    //         deleteJournalEntryUseCase = get()
-    //     )
-    // }
-    // viewModel {
-    //     GuidedJournalEditorViewModel(
-    //         getAdaptivePromptUseCase = get(),
-    //         getJournalByIdUseCase = get(),
-    //         saveJournalEntryUseCase = get()
-    //     )
-    // }
-    // viewModel {
-    //     JournalDetailViewModel(
-    //         getJournalByIdUseCase = get(),
-    //         togglePinJournalUseCase = get(),
-    //         deleteJournalEntryUseCase = get()
-    //     )
-    // }
+    viewModel {
+        JournalViewModel(
+            observeJournalEntriesUseCase = get(),
+            getAdaptivePromptUseCase = get(),
+            togglePinJournalUseCase = get(),
+            deleteJournalEntryUseCase = get()
+        )
+    }
+    viewModel {
+        GuidedJournalEditorViewModel(
+            getAdaptivePromptUseCase = get(),
+            getJournalByIdUseCase = get(),
+            saveJournalEntryUseCase = get()
+        )
+    }
+    viewModel {
+        JournalDetailViewModel(
+            getJournalByIdUseCase = get(),
+            togglePinJournalUseCase = get(),
+            deleteJournalEntryUseCase = get()
+        )
+    }
 }
