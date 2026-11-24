@@ -33,6 +33,12 @@ object GuidedFeelingCatalog {
     )
 }
 
+sealed interface EditorModal {
+    data object None : EditorModal
+    data object TemplateSelector : EditorModal
+    data object DatePicker : EditorModal
+}
+
 data class GuidedJournalEditorUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
@@ -56,8 +62,7 @@ data class GuidedJournalEditorUiState(
     val selectedTag: JournalCategoryTag = JournalCategoryTag.UMUM,
     val hasUserPickedTag: Boolean = false,
     val isPinned: Boolean = false,
-    val isTemplateSheetVisible: Boolean = false,
-    val isDatePickerVisible: Boolean = false,
+    val activeModal: EditorModal = EditorModal.None,
     val titleError: String? = null,
     val contentError: String? = null,
     val saveError: String? = null,

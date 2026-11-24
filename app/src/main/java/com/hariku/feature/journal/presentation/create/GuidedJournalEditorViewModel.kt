@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 class GuidedJournalEditorViewModel(
     private val getAdaptivePromptUseCase: GetAdaptivePromptUseCase,
@@ -269,11 +272,11 @@ class GuidedJournalEditorViewModel(
     }
 
     fun onShowTemplateSheet() {
-        _uiState.update { it.copy(isTemplateSheetVisible = true) }
+        _uiState.update { it.copy(activeModal = EditorModal.TemplateSelector) }
     }
 
     fun onDismissTemplateSheet() {
-        _uiState.update { it.copy(isTemplateSheetVisible = false) }
+        _uiState.update { it.copy(activeModal = EditorModal.None) }
     }
 
     fun onSelectTemplate(template: CbtTemplateType) {
@@ -281,25 +284,28 @@ class GuidedJournalEditorViewModel(
             val updated = state.copy(
                 selectedTemplate = template,
                 isTemplateManuallyOverridden = true,
-                isTemplateSheetVisible = false
+                activeModal = EditorModal.None
             )
             updated.copy(dynamicPrompts = computeDynamicPrompts(updated))
         }
     }
 
     fun onShowDatePicker() {
-        _uiState.update { it.copy(isDatePickerVisible = true) }
+        _uiState.update { it.copy(activeModal = EditorModal.DatePicker) }
     }
 
     fun onDismissDatePicker() {
-        _uiState.update { it.copy(isDatePickerVisible = false) }
+        _uiState.update { it.copy(activeModal = EditorModal.None) }
     }
 
-    fun onDateSelected(selectedDateMillis: Long) {
-        _uiState.update {
-            it.copy(
-                dateMillis = selectedDateMillis,
-                isDatePickerVisible = false
+    fun onDateSelected(selectedUtcDateMillis: Long) {
+        _uiState.update { state ->
+            state.copy(
+                dateMillis = mergeUtcDateWithLocalTime(
+                    utcDateMillis = selectedUtcDateMillis,
+                    referenceMillis = state.dateMillis
+                ),
+                activeModal = EditorModal.None
             )
         }
     }
@@ -501,6 +507,19 @@ class GuidedJournalEditorViewModel(
     private fun sendEvent(event: GuidedJournalEditorEvent) {
         viewModelScope.launch {
             _events.send(event)
+        }
+    }
+
+    companion object {
+        /** Material3 DatePicker mengembalikan UTC 00:00; gabungkan dengan jam lokal agar tanggal tidak bergeser. */
+        fun mergeUtcDateWithLocalTime(
+            utcDateMillis: Long,
+            referenceMillis: Long,
+            zoneId: ZoneId = ZoneId.systemDefault()
+        ): Long {
+            val pickedDate = Instant.ofEpochMilli(utcDateMillis).atZone(ZoneOffset.UTC).toLocalDate()
+            val localTime = Instant.ofEpochMilli(referenceMillis).atZone(zoneId).toLocalTime()
+            return pickedDate.atTime(localTime).atZone(zoneId).toInstant().toEpochMilli()
         }
     }
 }

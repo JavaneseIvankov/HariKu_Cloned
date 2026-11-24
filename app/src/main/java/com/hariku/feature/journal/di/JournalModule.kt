@@ -27,8 +27,8 @@ val journalModule = module {
         PsychologicalContextProviderImpl(
             moodRepository = get(),
             chatbotRepository = get(),
-            currentUserIdProvider = {
-                runCatching { get<FirebaseAuth>().currentUser?.uid }.getOrNull()
+            userIdFlow = PsychologicalContextProviderImpl.observeFirebaseUserIdFlow {
+                runCatching { get<FirebaseAuth>() }.getOrNull()
             }
         )
     }

@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,6 +80,7 @@ fun JournalDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val currentOnNavigateBack by rememberUpdatedState(onNavigateBack)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.loadJournal(journalId)
@@ -87,15 +89,9 @@ fun JournalDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
             when (event) {
-                JournalDetailEvent.DeletedAndNavigateBack -> onNavigateBack()
+                JournalDetailEvent.DeletedAndNavigateBack -> currentOnNavigateBack()
+                is JournalDetailEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
             }
-        }
-    }
-
-    LaunchedEffect(state.feedbackMessage) {
-        state.feedbackMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.onDismissFeedback()
         }
     }
 

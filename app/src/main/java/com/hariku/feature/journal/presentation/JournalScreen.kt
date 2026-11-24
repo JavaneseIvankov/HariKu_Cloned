@@ -58,6 +58,7 @@ import com.hariku.feature.journal.presentation.components.AdaptivePromptBannerCa
 import com.hariku.feature.journal.presentation.components.JournalCategoryChipRow
 import com.hariku.feature.journal.presentation.components.JournalEntryCard
 import com.hariku.feature.journal.presentation.components.TemplateSelectorSheet
+import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -68,12 +69,16 @@ fun JournalScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.feedbackMessage, state.errorMessage) {
-        val message = state.errorMessage ?: state.feedbackMessage
-        if (message != null) {
-            snackbarHostState.showSnackbar(message)
-            viewModel.onDismissMessage()
+    LaunchedEffect(Unit) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is JournalEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
+            }
         }
+    }
+
+    LaunchedEffect(state.errorMessage) {
+        state.errorMessage?.let { snackbarHostState.showSnackbar(it) }
     }
 
     JournalScreenContent(
@@ -203,7 +208,7 @@ fun JournalScreenContent(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Search Bar ("Cari Jurnal atau Halaman")
-                item(key = "search_bar") {
+                item(key = "search_bar", contentType = "search_bar") {
                     JournalSearchBar(
                         query = state.searchQuery,
                         onQueryChange = onSearchQueryChange,
@@ -212,7 +217,7 @@ fun JournalScreenContent(
                 }
 
                 // Filter chip kategori
-                item(key = "category_chips") {
+                item(key = "category_chips", contentType = "category_chips") {
                     JournalCategoryChipRow(
                         selectedCategory = state.selectedCategory,
                         onSelectCategory = onSelectCategory
@@ -220,7 +225,7 @@ fun JournalScreenContent(
                 }
 
                 // Banner Adaptive CBT Prompt
-                item(key = "adaptive_banner") {
+                item(key = "adaptive_banner", contentType = "adaptive_banner") {
                     AdaptivePromptBannerCard(
                         recommendation = state.recommendation,
                         onStartGuidedReflection = { onStartGuidedJournal(null) },
@@ -233,7 +238,7 @@ fun JournalScreenContent(
 
                 when {
                     state.isLoading -> {
-                        item(key = "loading") {
+                        item(key = "loading", contentType = "loading") {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -246,7 +251,7 @@ fun JournalScreenContent(
                     }
 
                     state.filteredEntries.isEmpty() -> {
-                        item(key = "empty_state") {
+                        item(key = "empty_state", contentType = "empty_state") {
                             JournalEmptyState(
                                 hasActiveFilter = state.hasActiveFilter,
                                 onClearFilters = onClearFilters,
@@ -257,7 +262,7 @@ fun JournalScreenContent(
 
                     else -> {
                         if (state.pinnedEntries.isNotEmpty()) {
-                            item(key = "pinned_header") {
+                            item(key = "pinned_header", contentType = "section_header") {
                                 SectionHeader(
                                     title = "Disematkan",
                                     count = state.pinnedEntries.size,
@@ -266,7 +271,8 @@ fun JournalScreenContent(
                             }
                             items(
                                 items = state.pinnedEntries,
-                                key = { "pinned_${it.id}" }
+                                key = { it.id },
+                                contentType = { "journal_entry" }
                             ) { entry ->
                                 JournalEntryCard(
                                     entry = entry,
@@ -279,7 +285,7 @@ fun JournalScreenContent(
                         }
 
                         if (state.recentEntries.isNotEmpty()) {
-                            item(key = "recent_header") {
+                            item(key = "recent_header", contentType = "section_header") {
                                 SectionHeader(
                                     title = if (state.pinnedEntries.isNotEmpty()) {
                                         "Jurnal Terbaru"
@@ -292,7 +298,8 @@ fun JournalScreenContent(
                             }
                             items(
                                 items = state.recentEntries,
-                                key = { "recent_${it.id}" }
+                                key = { it.id },
+                                contentType = { "journal_entry" }
                             ) { entry ->
                                 JournalEntryCard(
                                     entry = entry,

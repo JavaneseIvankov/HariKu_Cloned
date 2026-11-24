@@ -22,8 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hariku.core.ui.theme.HariKuTheme
 import com.hariku.feature.journal.domain.model.CbtTemplateType
 import com.hariku.feature.journal.presentation.JournalDesignTokens
 
@@ -33,12 +35,14 @@ fun TemplateSelectorSheet(
     recommendedTemplate: CbtTemplateType,
     selectedTemplate: CbtTemplateType = recommendedTemplate,
     onSelectTemplate: (CbtTemplateType) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        modifier = modifier,
         sheetState = sheetState,
         containerColor = JournalDesignTokens.CardWhite
     ) {
@@ -133,5 +137,17 @@ fun TemplateSelectorSheet(
                 }
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun TemplateSelectorSheetPreview() {
+    HariKuTheme {
+        TemplateSelectorSheet(
+            recommendedTemplate = CbtTemplateType.COGNITIVE_REFRAMING,
+            onSelectTemplate = {},
+            onDismiss = {}
+        )
     }
 }

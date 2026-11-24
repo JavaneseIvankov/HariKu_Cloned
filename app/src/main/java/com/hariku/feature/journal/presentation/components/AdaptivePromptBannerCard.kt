@@ -36,9 +36,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hariku.R
+import com.hariku.core.ui.theme.HariKuTheme
+import com.hariku.feature.journal.domain.engine.AdaptivePromptEngine
 import com.hariku.feature.journal.domain.model.AdsLevel
 import com.hariku.feature.journal.domain.model.EviLevel
 import com.hariku.feature.journal.domain.model.JournalPromptRecommendation
@@ -104,10 +107,7 @@ fun AdaptivePromptBannerCard(
                     )
                 }
 
-                IconButton(
-                    onClick = onCyclePrompt,
-                    modifier = Modifier.size(32.dp)
-                ) {
+                IconButton(onClick = onCyclePrompt) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
                         contentDescription = "Ganti variasi pertanyaan",
@@ -261,6 +261,21 @@ fun MetricStatusPill(
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             color = ink
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AdaptivePromptBannerCardPreview() {
+    HariKuTheme {
+        AdaptivePromptBannerCard(
+            recommendation = AdaptivePromptEngine.recommend(null, null),
+            onStartGuidedReflection = {},
+            onStartFreeWrite = {},
+            onCyclePrompt = {},
+            onOpenTemplateSheet = {},
+            modifier = Modifier.padding(16.dp)
         )
     }
 }

@@ -44,9 +44,13 @@ data class JournalUiState(
     val promptVariantIndex: Int = 0,
     val isTemplateSheetVisible: Boolean = false,
     val pendingDeleteEntry: JournalEntry? = null,
-    val feedbackMessage: String? = null,
+    val pendingMutationIds: Set<Long> = emptySet(),
     val errorMessage: String? = null
 ) {
     val hasActiveFilter: Boolean
         get() = searchQuery.isNotBlank() || selectedCategory != null
+}
+
+sealed interface JournalEvent {
+    data class ShowMessage(val message: String) : JournalEvent
 }

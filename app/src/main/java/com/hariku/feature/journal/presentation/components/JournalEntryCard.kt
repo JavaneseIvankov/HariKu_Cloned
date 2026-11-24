@@ -34,8 +34,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hariku.core.ui.theme.HariKuTheme
+import com.hariku.feature.journal.domain.model.CbtTemplateType
+import com.hariku.feature.journal.domain.model.JournalCategoryTag
 import com.hariku.feature.journal.domain.model.JournalEntry
 import com.hariku.feature.journal.presentation.JournalDesignTokens
 import java.time.Instant
@@ -117,10 +121,7 @@ fun JournalEntryCard(
                         color = JournalDesignTokens.TextMuted
                     )
                 }
-                IconButton(
-                    onClick = onTogglePin,
-                    modifier = Modifier.size(34.dp)
-                ) {
+                IconButton(onClick = onTogglePin) {
                     Icon(
                         imageVector = if (entry.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                         contentDescription = if (entry.isPinned) "Lepas sematan" else "Sematkan jurnal",
@@ -133,10 +134,7 @@ fun JournalEntryCard(
                     )
                 }
                 if (onDeleteClick != null) {
-                    IconButton(
-                        onClick = onDeleteClick,
-                        modifier = Modifier.size(34.dp)
-                    ) {
+                    IconButton(onClick = onDeleteClick) {
                         Icon(
                             imageVector = Icons.Filled.DeleteOutline,
                             contentDescription = "Hapus jurnal",
@@ -192,5 +190,27 @@ fun JournalEntryCard(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun JournalEntryCardPreview() {
+    HariKuTheme {
+        JournalEntryCard(
+            entry = JournalEntry(
+                id = 1L,
+                title = "Refleksi setelah presentasi",
+                content = "Awalnya gugup, tapi setelah mempersiapkan poin utama semuanya berjalan lancar.",
+                dateMillis = 1763971200000L,
+                tag = JournalCategoryTag.AKADEMIK,
+                templateType = CbtTemplateType.COGNITIVE_REFRAMING,
+                isPinned = true
+            ),
+            onClick = {},
+            onTogglePin = {},
+            onDeleteClick = {},
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }

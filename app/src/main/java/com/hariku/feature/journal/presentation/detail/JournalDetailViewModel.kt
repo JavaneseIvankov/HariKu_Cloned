@@ -25,10 +25,7 @@ class JournalDetailViewModel(
     private val _events = Channel<JournalDetailEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    private var currentId: Long? = null
-
     fun loadJournal(journalId: Long) {
-        currentId = journalId
         if (journalId <= 0L) {
             _uiState.update {
                 it.copy(
@@ -78,22 +75,18 @@ class JournalDetailViewModel(
                     _uiState.update { state ->
                         state.copy(
                             isWorking = false,
-                            entry = entry.copy(isPinned = nextPinned),
-                            feedbackMessage = if (nextPinned) {
-                                "Jurnal disematkan"
-                            } else {
-                                "Sematan jurnal dilepas"
-                            }
+                            entry = entry.copy(isPinned = nextPinned)
                         )
                     }
+                    _events.send(
+                        JournalDetailEvent.ShowMessage(
+                            if (nextPinned) "Jurnal disematkan" else "Sematan jurnal dilepas"
+                        )
+                    )
                 },
                 onFailure = {
-                    _uiState.update { state ->
-                        state.copy(
-                            isWorking = false,
-                            feedbackMessage = "Gagal mengubah status sematan."
-                        )
-                    }
+                    _uiState.update { it.copy(isWorking = false) }
+                    _events.send(JournalDetailEvent.ShowMessage("Gagal mengubah status sematan."))
                 }
             )
         }
@@ -127,18 +120,10 @@ class JournalDetailViewModel(
                     _events.send(JournalDetailEvent.DeletedAndNavigateBack)
                 },
                 onFailure = {
-                    _uiState.update {
-                        it.copy(
-                            isWorking = false,
-                            feedbackMessage = "Gagal menghapus jurnal. Coba lagi."
-                        )
-                    }
+                    _uiState.update { it.copy(isWorking = false) }
+                    _events.send(JournalDetailEvent.ShowMessage("Gagal menghapus jurnal. Coba lagi."))
                 }
             )
         }
-    }
-
-    fun onDismissFeedback() {
-        _uiState.update { it.copy(feedbackMessage = null) }
     }
 }

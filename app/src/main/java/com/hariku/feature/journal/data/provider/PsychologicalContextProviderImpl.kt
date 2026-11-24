@@ -10,9 +10,12 @@ import com.hariku.feature.mood.domain.repository.MoodRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -27,9 +30,7 @@ import kotlinx.coroutines.flow.map
 class PsychologicalContextProviderImpl(
     private val moodRepository: MoodRepository,
     private val chatbotRepository: ChatbotRepository,
-    private val currentUserIdProvider: () -> String? = {
-        runCatching { FirebaseAuth.getInstance().currentUser?.uid }.getOrNull()
-    },
+    private val userIdFlow: Flow<String?> = observeFirebaseUserIdFlow(),
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : PsychologicalContextProvider {
 
@@ -62,31 +63,55 @@ class PsychologicalContextProviderImpl(
             .flowOn(defaultDispatcher)
     }
 
-    private fun observeLatestUserMessages(): Flow<List<String>> {
-        val userId = runCatching { currentUserIdProvider() }.getOrNull()
-        if (userId.isNullOrBlank()) return flowOf(emptyList())
-
-        return runCatching {
-            chatbotRepository.getChatbotsWithHistory(userId)
-                .flatMapLatest { result ->
-                    val latestChatbotId = result.getOrNull()
-                        ?.maxByOrNull { it.lastMessageTime }
-                        ?.chatbot
-                        ?.id
-                    if (latestChatbotId.isNullOrBlank()) {
-                        flowOf(emptyList())
-                    } else {
-                        chatbotRepository.getChatMessages(latestChatbotId, userId)
-                            .map { messagesResult ->
-                                messagesResult.getOrDefault(emptyList())
-                                    .filter { it.isFromUser }
-                                    .sortedBy { it.timestamp }
-                                    .map { it.message }
+    private fun observeLatestUserMessages(): Flow<List<String>> =
+        userIdFlow
+            .distinctUntilChanged()
+            .flatMapLatest { userId ->
+                if (userId.isNullOrBlank()) {
+                    flowOf(emptyList())
+                } else {
+                    runCatching {
+                        chatbotRepository.getChatbotsWithHistory(userId)
+                            .flatMapLatest { result ->
+                                val latestChatbotId = result.getOrNull()
+                                    ?.maxByOrNull { it.lastMessageTime }
+                                    ?.chatbot
+                                    ?.id
+                                if (latestChatbotId.isNullOrBlank()) {
+                                    flowOf(emptyList())
+                                } else {
+                                    chatbotRepository.getChatMessages(latestChatbotId, userId)
+                                        .map { messagesResult ->
+                                            messagesResult.getOrDefault(emptyList())
+                                                .filter { it.isFromUser }
+                                                .sortedBy { it.timestamp }
+                                                .map { it.message }
+                                        }
+                                        .catch { emit(emptyList()) }
+                                }
                             }
                             .catch { emit(emptyList()) }
-                    }
+                    }.getOrElse { flowOf(emptyList()) }
                 }
-                .catch { emit(emptyList()) }
-        }.getOrElse { flowOf(emptyList()) }
+            }
+            .catch { emit(emptyList()) }
+
+    companion object {
+        fun observeFirebaseUserIdFlow(
+            authProvider: () -> FirebaseAuth? = { runCatching { FirebaseAuth.getInstance() }.getOrNull() }
+        ): Flow<String?> = callbackFlow {
+            val auth = runCatching { authProvider() }.getOrNull()
+            if (auth == null) {
+                trySend(null)
+                close()
+                return@callbackFlow
+            }
+            val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+                trySend(firebaseAuth.currentUser?.uid)
+            }
+            trySend(auth.currentUser?.uid)
+            auth.addAuthStateListener(listener)
+            awaitClose { auth.removeAuthStateListener(listener) }
+        }.distinctUntilChanged()
     }
 }
