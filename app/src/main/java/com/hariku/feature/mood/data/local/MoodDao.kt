@@ -10,12 +10,12 @@ interface MoodDao {
     @Insert
     suspend fun insert(entry: MoodEntryEntity): Long
 
-    @Query("SELECT * FROM mood_entries ORDER BY timestamp DESC, id DESC")
-    fun observeEntries(): Flow<List<MoodEntryEntity>>
+    @Query("SELECT * FROM mood_entries WHERE userId = :userId ORDER BY timestamp DESC, id DESC")
+    fun observeEntries(userId: String): Flow<List<MoodEntryEntity>>
 
-    @Query("UPDATE mood_entries SET moodType = :moodType, note = :note WHERE id = :entryId")
-    suspend fun updateById(entryId: Long, moodType: String, note: String)
+    @Query("UPDATE mood_entries SET moodType = :moodType, note = :note WHERE id = :entryId AND userId = :userId")
+    suspend fun updateById(entryId: Long, userId: String, moodType: String, note: String)
 
-    @Query("DELETE FROM mood_entries WHERE id = :entryId")
-    suspend fun deleteById(entryId: Long)
+    @Query("DELETE FROM mood_entries WHERE id = :entryId AND userId = :userId")
+    suspend fun deleteById(entryId: Long, userId: String)
 }

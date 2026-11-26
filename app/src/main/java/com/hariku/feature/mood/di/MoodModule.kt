@@ -1,5 +1,7 @@
 package com.hariku.feature.mood.di
 
+import com.google.firebase.auth.FirebaseAuth
+import com.hariku.core.auth.observeCurrentUserIdFlow
 import com.hariku.feature.mood.data.local.MoodDatabase
 import com.hariku.feature.mood.data.repository.MoodRepositoryImpl
 import com.hariku.feature.mood.domain.repository.MoodRepository
@@ -15,7 +17,12 @@ import org.koin.dsl.module
 val moodModule = module {
     single { MoodDatabase.open(androidContext()) }
     single { get<MoodDatabase>().moodDao() }
-    single<MoodRepository> { MoodRepositoryImpl(moodDao = get()) }
+    single<MoodRepository> {
+        MoodRepositoryImpl(
+            moodDao = get(),
+            userIdFlow = observeCurrentUserIdFlow { runCatching { get<FirebaseAuth>() }.getOrNull() }
+        )
+    }
 
     factory { ObserveMoodEntriesUseCase(repository = get()) }
     factory { SaveQuickMoodUseCase(repository = get()) }

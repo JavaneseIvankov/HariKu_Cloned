@@ -2,11 +2,12 @@ package com.hariku.feature.chatbot.presentation.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +36,8 @@ fun ChatTextFieldBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+            .navigationBarsPadding()
+            .imePadding()
     ) {
         Row(
             modifier = Modifier
@@ -76,13 +79,6 @@ fun ChatTextFieldBar(
                     modifier = Modifier.size(48.dp)
                 )
             }
-        }
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp, top = 8.dp)
-        ) {
         }
     }
 }

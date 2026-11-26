@@ -11,18 +11,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Policy
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -33,6 +39,10 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,14 +83,53 @@ private fun ProfileContent(
     onBack: () -> Unit,
     onLogout: () -> Unit
 ) {
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            containerColor = Color.White,
+            title = {
+                Text(
+                    text = "Keluar dari Akun?",
+                    fontWeight = FontWeight.Bold,
+                    color = ProfileText
+                )
+            },
+            text = {
+                Text(
+                    text = "Apakah kamu yakin ingin keluar dari akun ini?",
+                    color = Color(0xFF6B4E3D)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogout()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFD98585))
+                ) {
+                    Text("Keluar", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Batal", color = Color(0xFF6B4E3D))
+                }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = ProfileBackground,
         topBar = {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(70.dp)
                     .background(Color.White)
+                    .statusBarsPadding()
+                    .height(70.dp)
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -108,6 +157,8 @@ private fun ProfileContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -150,12 +201,12 @@ private fun ProfileContent(
             ProfileMenuRow("Notifikasi", Icons.Filled.NotificationsNone)
             ProfileMenuRow("Dark Mode", Icons.Filled.DarkMode, showSwitch = true)
             ProfileMenuRow("Ketentuan Pengguna", Icons.Filled.Policy)
-            ProfileMenuRow("Bantuan", Icons.Filled.HelpOutline)
+            ProfileMenuRow("Bantuan", Icons.AutoMirrored.Filled.HelpOutline)
             ProfileMenuRow(
                 text = "Keluar",
-                icon = Icons.Filled.Logout,
+                icon = Icons.AutoMirrored.Filled.Logout,
                 color = Color(0xFFD98585),
-                onClick = onLogout
+                onClick = { showLogoutDialog = true }
             )
         }
     }

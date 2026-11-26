@@ -6,6 +6,7 @@ import com.hariku.feature.auth.di.authModule
 import com.hariku.feature.chatbot.di.chatbotModule
 import com.hariku.feature.profile.di.profileModule
 import com.hariku.feature.home.di.homeModule
+import com.hariku.feature.journal.di.journalModule
 import com.hariku.feature.mood.di.moodModule
 import com.hariku.feature_statistic.di.statisticModule
 import org.koin.android.ext.koin.androidContext
@@ -23,6 +24,7 @@ class HariKuApp : Application() {
                 profileModule,
                 homeModule,
                 moodModule,
+                journalModule,
                 statisticModule
             )
         }

@@ -21,8 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,11 +35,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
-import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.ui.components.Routes
 import com.hariku.core.ui.theme.HariKuTheme
+import com.hariku.feature.journal.domain.engine.AdaptivePromptEngine
+import com.hariku.feature.journal.presentation.components.JournalHomeCard
+import com.hariku.feature.journal.presentation.components.JournalHomeSection
 import com.hariku.feature.mood.presentation.QuickMoodTrackerCard
 import com.hariku.feature.mood.presentation.QuickMoodTrackerSection
 import com.hariku.feature.mood.presentation.QuickMoodUiState
@@ -57,6 +56,7 @@ fun HomeScreen(
     navController: NavController,
     onOpenProfile: () -> Unit,
     onOpenSos: () -> Unit,
+    onOpenJournalTab: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val user = viewModel.currentUser
@@ -66,7 +66,16 @@ fun HomeScreen(
         onOpenProfile = onOpenProfile,
         onOpenSos = onOpenSos,
         onOpenChat = { navController.navigate(Routes.CustomizeCat.route) },
-        moodTrackerContent = { QuickMoodTrackerSection() }
+        moodTrackerContent = { QuickMoodTrackerSection() },
+        journalSectionContent = {
+            JournalHomeSection(
+                onStartGuidedJournal = { navController.navigate(Routes.CreateNotePrompt.route) },
+                onOpenJournalTab = onOpenJournalTab,
+                onOpenEntryDetail = { entryId ->
+                    navController.navigate(Routes.JournalDetail.createRoute(entryId.toString()))
+                }
+            )
+        }
     )
 }
 
@@ -77,7 +86,8 @@ private fun HomeContent(
     onOpenProfile: () -> Unit,
     onOpenSos: () -> Unit,
     onOpenChat: () -> Unit,
-    moodTrackerContent: @Composable () -> Unit
+    moodTrackerContent: @Composable () -> Unit,
+    journalSectionContent: @Composable () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -153,36 +163,16 @@ private fun HomeContent(
             moodTrackerContent()
         }
         item {
-            PlaceholderSection(
-                title = "Refleksi harian",
-                owner = "Guided Journaling · Yoga",
-                message = "Prompt dan jurnal harian akan tersedia di bagian ini.",
-                tint = Color(0xFFF9EEE5)
-            )
+            journalSectionContent()
         }
         item {
             Text(
-                text = "Bagian ini akan terhubung ke fitur masing-masing setelah implementasi pemiliknya selesai.",
+                text = "Setiap catatan suasana hati dan obrolan membantu HariKu menyesuaikan refleksi harianmu.",
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
                 fontSize = 12.sp,
                 color = HomeMuted,
                 textAlign = TextAlign.Center
             )
-        }
-    }
-}
-
-@Composable
-private fun PlaceholderSection(title: String, owner: String, message: String, tint: Color) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = tint)
-    ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(owner, fontSize = 11.sp, color = HomeMuted, fontWeight = FontWeight.Medium)
-            Text(title, fontSize = 18.sp, color = HomeInk, fontWeight = FontWeight.Bold)
-            Text(message, fontSize = 13.sp, color = HomeMuted, lineHeight = 19.sp)
         }
     }
 }
@@ -208,6 +198,16 @@ private fun HomePreview() {
                     onDeleteEntry = {},
                     onDismissFeedback = {},
                     onRetryLoad = {}
+                )
+            },
+            journalSectionContent = {
+                JournalHomeCard(
+                    recommendation = AdaptivePromptEngine.recommend(null, null),
+                    latestEntry = null,
+                    totalCount = 0,
+                    onStartGuidedJournal = {},
+                    onOpenJournalTab = {},
+                    onOpenEntryDetail = {}
                 )
             }
         )

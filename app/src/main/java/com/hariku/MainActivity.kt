@@ -8,7 +8,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -29,6 +28,9 @@ import com.hariku.feature.chatbot.presentation.detail.ChatbotDetailScreen
 import com.hariku.feature.sos.SosScreen
 import com.hariku.feature.sos.SosProfessionalScreen
 import com.hariku.feature.home.presentation.HomeScreen
+import com.hariku.feature.journal.presentation.create.GuidedJournalEditorScreen
+import com.hariku.feature.journal.presentation.create.JournalCompletedScreen
+import com.hariku.feature.journal.presentation.detail.JournalDetailScreen
 import com.hariku.feature_statistic.presentation.StatisticScreen
 import com.hariku.feature.profile.presentation.ProfileScreen
 
@@ -98,14 +100,23 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
             )
         }
         composable(Routes.Home.route) {
+            val bottomNavController = rememberNavController()
             MainScaffold(
                 parentNavController = navController,
                 initialTabIndex = 0,
+                bottomNavController = bottomNavController,
                 homeContent = {
                     HomeScreen(
                         navController = navController,
                         onOpenProfile = { navController.navigate(Routes.Profile.route) },
-                        onOpenSos = { navController.navigate(Routes.SosGraph.route) }
+                        onOpenSos = { navController.navigate(Routes.SosGraph.route) },
+                        onOpenJournalTab = {
+                            bottomNavController.navigate(Routes.Journal.route) {
+                                popUpTo(Routes.Home.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     )
                 },
                 statisticContent = {
@@ -148,6 +159,39 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
         }
         composable(Routes.SosProfessional.route) {
             SosProfessionalScreen(onBack = { navController.popBackStack() })
+        }
+        composable("${Routes.CreateNotePrompt.route}?journalId={journalId}&skipToEditor={skipToEditor}&template={template}") { entry ->
+            val args = entry.arguments
+            GuidedJournalEditorScreen(
+                journalId = args?.getString("journalId")?.toLongOrNull(),
+                skipToEditor = args?.getString("skipToEditor")?.toBooleanStrictOrNull() ?: false,
+                templateOverride = args?.getString("template"),
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCompleted = {
+                    navController.navigate(Routes.CreateNotePromptCompleted.route) {
+                        popUpTo(Routes.Home.route) { inclusive = false }
+                    }
+                }
+            )
+        }
+        composable(Routes.CreateNotePromptCompleted.route) {
+            JournalCompletedScreen(
+                onBackToJournal = { navController.popBackStack(Routes.Home.route, inclusive = false) }
+            )
+        }
+        composable("journal_detail/{journalId}") { entry ->
+            JournalDetailScreen(
+                journalId = entry.arguments?.getString("journalId")?.toLongOrNull() ?: 0L,
+                onNavigateBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Routes.Home.route) {
+                            popUpTo(Routes.Home.route) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                onEditJournal = { id -> navController.navigate("${Routes.CreateNotePrompt.route}?journalId=$id") }
+            )
         }
     }
 }
