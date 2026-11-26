@@ -1,7 +1,6 @@
 package com.hariku.feature.mood.di
 
-import com.google.firebase.auth.FirebaseAuth
-import com.hariku.core.auth.observeCurrentUserIdFlow
+import com.hariku.core.auth.CurrentUserSession
 import com.hariku.feature.mood.data.local.MoodDatabase
 import com.hariku.feature.mood.data.repository.MoodRepositoryImpl
 import com.hariku.feature.mood.domain.repository.MoodRepository
@@ -20,7 +19,7 @@ val moodModule = module {
     single<MoodRepository> {
         MoodRepositoryImpl(
             moodDao = get(),
-            userIdFlow = observeCurrentUserIdFlow { runCatching { get<FirebaseAuth>() }.getOrNull() }
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
 
@@ -34,7 +33,8 @@ val moodModule = module {
             observeMoodEntriesUseCase = get(),
             saveQuickMoodUseCase = get(),
             deleteMoodEntryUseCase = get(),
-            updateMoodEntryUseCase = get()
+            updateMoodEntryUseCase = get(),
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
 }

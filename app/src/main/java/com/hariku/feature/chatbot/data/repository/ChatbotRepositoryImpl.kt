@@ -75,8 +75,8 @@ class ChatbotRepositoryImpl(
                 val historyFlows = dtoList.map { dto ->
                     val chatbot = mapper.toDomain(dto, userId)
                     combine(
-                        firebaseService.observeLastMessage(chatbot.id, userId),
-                        firebaseService.observeUnreadCount(chatbot.id, userId)
+                        firebaseService.observeLastMessage(chatbot.id, userId).catch { emit(null) },
+                        firebaseService.observeUnreadCount(chatbot.id, userId).catch { emit(0) }
                     ) { lastMessage, unreadCount ->
                         ChatbotWithHistory(
                             chatbot = chatbot,

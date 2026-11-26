@@ -5,31 +5,54 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
 import com.hariku.feature.chatbot.domain.model.Chatbot
 import com.hariku.feature.chatbot.domain.usecase.AddChatbotUseCase
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.util.UUID
 
 class CustomizeCatViewModel(
     private val addChatbotUseCase: AddChatbotUseCase,
-    private val firebaseAuth: FirebaseAuth
+    private val userIdFlow: Flow<String?>
 ) : ViewModel() {
-    
+
     var uiState by mutableStateOf(CustomizeCatUiState())
         private set
-    
+
+    init {
+        userIdFlow
+            .map { it?.takeIf(String::isNotBlank) }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach { resetState() }
+            .launchIn(viewModelScope)
+    }
+
     fun addChatbot(
         name: String,
         subtitle: String,
         description: String,
         avatarResId: Int
     ) {
-        val userId = firebaseAuth.currentUser?.uid ?: return
-        
         viewModelScope.launch {
+            val userId = userIdFlow.firstOrNull()?.takeIf(String::isNotBlank)
+            if (userId == null) {
+                uiState = uiState.copy(
+                    isLoading = false,
+                    isSuccess = false,
+                    error = "User tidak terautentikasi"
+                )
+                return@launch
+            }
+
             uiState = uiState.copy(isLoading = true, error = null)
-            
+
             val chatbot = Chatbot(
                 id = UUID.randomUUID().toString(),
                 name = name,
@@ -39,10 +62,8 @@ class CustomizeCatViewModel(
                 createdAt = System.currentTimeMillis(),
                 userId = userId
             )
-            
-            val result = addChatbotUseCase(chatbot)
-            
-            result.fold(
+
+            addChatbotUseCase(chatbot).fold(
                 onSuccess = {
                     uiState = uiState.copy(
                         isLoading = false,
@@ -60,7 +81,7 @@ class CustomizeCatViewModel(
             )
         }
     }
-    
+
     fun resetState() {
         uiState = CustomizeCatUiState()
     }

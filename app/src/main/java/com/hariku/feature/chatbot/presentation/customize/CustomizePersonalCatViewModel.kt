@@ -5,15 +5,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
 import com.hariku.feature.chatbot.domain.model.Chatbot
 import com.hariku.feature.chatbot.domain.usecase.AddChatbotUseCase
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.util.UUID
 
 class CustomizePersonalCatViewModel(
     private val addChatbotUseCase: AddChatbotUseCase,
-    private val firebaseAuth: FirebaseAuth
+    private val userIdFlow: Flow<String?>
 ) : ViewModel() {
     
     var uiState by mutableStateOf(CustomizePersonalCatUiState())
@@ -45,15 +46,15 @@ class CustomizePersonalCatViewModel(
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        val userId = firebaseAuth.currentUser?.uid
-        if (userId == null) {
-            onError("User tidak terautentikasi")
-            return
-        }
-        
-        uiState = uiState.copy(isSaving = true)
-        
         viewModelScope.launch {
+            val userId = userIdFlow.firstOrNull()?.takeIf(String::isNotBlank)
+            if (userId == null) {
+                onError("User tidak terautentikasi")
+                return@launch
+            }
+
+            uiState = uiState.copy(isSaving = true)
+
             try {
                 val subtitle = buildSubtitle()
                 val description = buildDescription()

@@ -3,6 +3,7 @@ package com.hariku.feature.mood.presentation
 import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hariku.core.auth.toScopedUserId
 import com.hariku.feature.mood.domain.model.MoodEntry
 import com.hariku.feature.mood.domain.model.MoodTrackerLogic
 import com.hariku.feature.mood.domain.model.MoodType
@@ -10,11 +11,19 @@ import com.hariku.feature.mood.domain.usecase.DeleteMoodEntryUseCase
 import com.hariku.feature.mood.domain.usecase.ObserveMoodEntriesUseCase
 import com.hariku.feature.mood.domain.usecase.SaveQuickMoodUseCase
 import com.hariku.feature.mood.domain.usecase.UpdateMoodEntryUseCase
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -25,10 +34,15 @@ class QuickMoodViewModel(
     private val saveQuickMoodUseCase: SaveQuickMoodUseCase,
     private val deleteMoodEntryUseCase: DeleteMoodEntryUseCase,
     private val updateMoodEntryUseCase: UpdateMoodEntryUseCase,
+    private val userIdFlow: Flow<String?> = flowOf(null),
     private val todayProvider: () -> LocalDate = { LocalDate.now() },
     private val nowProvider: () -> Long = { System.currentTimeMillis() },
-    private val zoneId: ZoneId = ZoneId.systemDefault()
+    private val zoneId: ZoneId = ZoneId.systemDefault(),
+    private val coroutineScopeOverride: CoroutineScope? = null
 ) : ViewModel() {
+
+    private val scope: CoroutineScope
+        get() = coroutineScopeOverride ?: viewModelScope
 
     private val _uiState = MutableStateFlow(QuickMoodUiState())
     val uiState: StateFlow<QuickMoodUiState> = _uiState.asStateFlow()
@@ -37,6 +51,32 @@ class QuickMoodViewModel(
 
     init {
         observeMoodEntries()
+        observeSessionChanges()
+    }
+
+    private fun observeSessionChanges() {
+        userIdFlow
+            .map { it.toScopedUserId() }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach {
+                _uiState.update { state ->
+                    state.copy(
+                        isSaving = false,
+                        noteInput = "",
+                        isNoteExpanded = false,
+                        isHistoryExpanded = false,
+                        historyPage = 0,
+                        editingEntry = null,
+                        editMood = null,
+                        editNote = "",
+                        feedbackMessage = null,
+                        lastSavedEntryId = null,
+                        actionError = null
+                    )
+                }
+            }
+            .launchIn(scope)
     }
 
     fun retryLoad() {
@@ -156,7 +196,7 @@ class QuickMoodViewModel(
             )
         }
 
-        viewModelScope.launch {
+        scope.launch {
             updateMoodEntryUseCase(
                 entryId = targetEntry.id,
                 mood = targetMood,
@@ -200,7 +240,7 @@ class QuickMoodViewModel(
             )
         }
 
-        viewModelScope.launch {
+        scope.launch {
             val result = saveQuickMoodUseCase(
                 mood = mood,
                 note = noteToSave,
@@ -241,7 +281,7 @@ class QuickMoodViewModel(
         if (_uiState.value.isSaving) return
 
         _uiState.update { it.copy(isSaving = true, actionError = null) }
-        viewModelScope.launch {
+        scope.launch {
             deleteMoodEntryUseCase(entryId).fold(
                 onSuccess = {
                     _uiState.update { state ->
@@ -283,7 +323,7 @@ class QuickMoodViewModel(
         observeJob?.cancel()
         _uiState.update { it.copy(isLoading = true, loadError = null) }
 
-        observeJob = viewModelScope.launch {
+        observeJob = scope.launch {
             observeMoodEntriesUseCase()
                 .catch { error ->
                     if (error !is SQLiteException) throw error

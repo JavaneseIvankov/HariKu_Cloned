@@ -7,8 +7,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -18,6 +20,9 @@ import com.hariku.core.ui.components.MainScaffold
 import com.hariku.core.ui.components.Routes
 import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.ui.theme.HariKuTheme
+import com.hariku.feature.auth.domain.usecase.GetCurrentUserUseCase
+import com.hariku.feature.auth.domain.usecase.ObserveAuthStateUseCase
+import org.koin.compose.koinInject
 import com.hariku.feature.sos.SensesScreen
 import com.hariku.feature.auth.presentation.login.LoginScreen
 import com.hariku.feature.auth.presentation.register.RegisterScreen
@@ -73,10 +78,34 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
     val isFirebaseConfigured = remember(context) {
         FirebaseApp.getApps(context).isNotEmpty()
     }
-    val startDestination = if (!isFirebaseConfigured || FirebaseAuth.getInstance().currentUser != null) {
-        Routes.Home.route
-    } else {
-        Routes.Login.route
+    val observeAuthStateUseCase: ObserveAuthStateUseCase = koinInject()
+    val getCurrentUserUseCase: GetCurrentUserUseCase = koinInject()
+    val initialAuthUser = remember {
+        if (isFirebaseConfigured) getCurrentUserUseCase() else null
+    }
+    val authStateFlow = remember(observeAuthStateUseCase) { observeAuthStateUseCase() }
+    val authUser by authStateFlow.collectAsStateWithLifecycle(initialValue = initialAuthUser)
+
+    val startDestination = remember(isFirebaseConfigured) {
+        if (!isFirebaseConfigured || FirebaseAuth.getInstance().currentUser != null) {
+            Routes.Home.route
+        } else {
+            Routes.Login.route
+        }
+    }
+
+    LaunchedEffect(isFirebaseConfigured, authUser, route) {
+        if (isFirebaseConfigured &&
+            authUser == null &&
+            route != null &&
+            route != Routes.Login.route &&
+            route != Routes.Register.route
+        ) {
+            navController.navigate(Routes.Login.route) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
     }
     NavHost(navController = navController, startDestination = startDestination) {
         composable(Routes.Login.route) {

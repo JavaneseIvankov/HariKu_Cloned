@@ -1,7 +1,6 @@
 package com.hariku.feature.journal.di
 
-import com.google.firebase.auth.FirebaseAuth
-import com.hariku.core.auth.observeCurrentUserIdFlow
+import com.hariku.core.auth.CurrentUserSession
 import com.hariku.feature.journal.data.local.JournalDatabase
 import com.hariku.feature.journal.data.provider.PsychologicalContextProviderImpl
 import com.hariku.feature.journal.data.repository.JournalRepositoryImpl
@@ -26,16 +25,14 @@ val journalModule = module {
     single<JournalRepository> {
         JournalRepositoryImpl(
             journalDao = get(),
-            userIdFlow = observeCurrentUserIdFlow { runCatching { get<FirebaseAuth>() }.getOrNull() }
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
     single<PsychologicalContextProvider> {
         PsychologicalContextProviderImpl(
             moodRepository = get(),
             chatbotRepository = get(),
-            userIdFlow = PsychologicalContextProviderImpl.observeFirebaseUserIdFlow {
-                runCatching { get<FirebaseAuth>() }.getOrNull()
-            }
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
 
@@ -56,7 +53,8 @@ val journalModule = module {
             observeJournalEntriesUseCase = get(),
             getAdaptivePromptUseCase = get(),
             togglePinJournalUseCase = get(),
-            deleteJournalEntryUseCase = get()
+            deleteJournalEntryUseCase = get(),
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
     viewModel {
@@ -70,7 +68,8 @@ val journalModule = module {
         JournalDetailViewModel(
             getJournalByIdUseCase = get(),
             togglePinJournalUseCase = get(),
-            deleteJournalEntryUseCase = get()
+            deleteJournalEntryUseCase = get(),
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
 }
