@@ -1,0 +1,271 @@
+{
+  "format": 1,
+  "revisionFormat": 2,
+  "entries": {
+    "topology/peer-seq": {
+      "key": "topology/peer-seq",
+      "value": {
+        "format": 1,
+        "next": 3
+      },
+      "version": 3,
+      "updatedAt": 1795361031768,
+      "updatedBy": {
+        "id": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a1d9da-fffe-7132-83db-ef7357ccfaaf"
+      }
+    },
+    "sessions/01a1d9da-fffe-7132-83db-ef7357ccfaaf": {
+      "key": "sessions/01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+      "value": {
+        "id": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "name": "HC-3",
+        "label": "HC-3",
+        "kind": "peer",
+        "status": "idle",
+        "runner": "pi",
+        "transport": "host",
+        "cwd": "/home/arundaya/AndroidStudioProjects/HariKu_Cloned",
+        "sessionId": "01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "model": "9router/best-worth",
+        "thinking": "off",
+        "startedAt": 1795508458488,
+        "updatedAt": 1795509485768,
+        "pendingMessages": false,
+        "local": false
+      },
+      "version": 18666,
+      "updatedAt": 1795509485769,
+      "updatedBy": {
+        "id": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a1d9da-fffe-7132-83db-ef7357ccfaaf"
+      }
+    },
+    "topology/participants/7933bad54cd57074e7f3df3fe9cf86dd6f4dc2297385eca98611d8b4da176d7e": {
+      "key": "topology/participants/7933bad54cd57074e7f3df3fe9cf86dd6f4dc2297385eca98611d8b4da176d7e",
+      "value": {
+        "format": 1,
+        "id": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "kind": "root",
+        "rootId": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "ownerHostId": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "ownerIdentityId": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "name": "main",
+        "status": "idle",
+        "runner": "pi",
+        "transport": "host",
+        "capabilities": [
+          "steer",
+          "followUp",
+          "fabric"
+        ],
+        "cwd": "/home/arundaya/AndroidStudioProjects/HariKu_Cloned",
+        "sessionId": "01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "model": "9router/best-worth",
+        "thinking": "off",
+        "startedAt": 1795508458488,
+        "updatedAt": 1795509485768,
+        "pendingMessages": false,
+        "controlProtocol": "v1",
+        "ownerIncarnation": "0f2ec308-f83f-4b33-a40b-55448a433950",
+        "label": "HC-3"
+      },
+      "version": 18667,
+      "updatedAt": 1795509485771,
+      "updatedBy": {
+        "id": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a1d9da-fffe-7132-83db-ef7357ccfaaf"
+      }
+    },
+    "topology/hosts/7933bad54cd57074e7f3df3fe9cf86dd6f4dc2297385eca98611d8b4da176d7e": {
+      "key": "topology/hosts/7933bad54cd57074e7f3df3fe9cf86dd6f4dc2297385eca98611d8b4da176d7e",
+      "value": {
+        "format": 1,
+        "id": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "rootId": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "identity": {
+          "id": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+          "name": "main",
+          "kind": "main",
+          "sessionId": "01a1d9da-fffe-7132-83db-ef7357ccfaaf"
+        },
+        "startedAt": 1795508458489,
+        "updatedAt": 1795509485771,
+        "expiresAt": 1795509500771
+      },
+      "version": 18668,
+      "updatedAt": 1795509485772,
+      "updatedBy": {
+        "id": "session:01a1d9da-fffe-7132-83db-ef7357ccfaaf",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a1d9da-fffe-7132-83db-ef7357ccfaaf"
+      }
+    },
+    "topology/peer-seq/3": {
+      "key": "topology/peer-seq/3",
+      "value": {
+        "format": 1,
+        "next": 2
+      },
+      "version": 35787,
+      "updatedAt": 1795691286717,
+      "updatedBy": {
+        "id": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a2178a-658f-742c-8821-060261ca96bc"
+      }
+    },
+    "topology/tombstones/74255fcb0ec5594060967d645250346327de5d17246c3f0090b62f32a6c95427": {
+      "key": "topology/tombstones/74255fcb0ec5594060967d645250346327de5d17246c3f0090b62f32a6c95427",
+      "value": {
+        "format": 1,
+        "id": "session:01a21788-eb62-700c-a5b0-19b4c7b3eeb6",
+        "kind": "root",
+        "rootId": "session:01a21788-eb62-700c-a5b0-19b4c7b3eeb6",
+        "ownerHostId": "session:01a21788-eb62-700c-a5b0-19b4c7b3eeb6",
+        "ownerIdentityId": "session:01a21788-eb62-700c-a5b0-19b4c7b3eeb6",
+        "ownerIncarnation": "87fa69ab-7c9d-499c-9654-b5d5ff4ae052",
+        "name": "main",
+        "label": "HC-1",
+        "cwd": "/home/arundaya/AndroidStudioProjects/HariKu_Cloned",
+        "sessionId": "01a21788-eb62-700c-a5b0-19b4c7b3eeb6",
+        "status": "stopped",
+        "startedAt": 1795691210771,
+        "lastSeenAt": 1795691249420
+      },
+      "version": 35814,
+      "updatedAt": 1795691249421,
+      "updatedBy": {
+        "id": "session:01a21788-eb62-700c-a5b0-19b4c7b3eeb6",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a21788-eb62-700c-a5b0-19b4c7b3eeb6"
+      }
+    },
+    "sessions/01a2178a-658f-742c-8821-060261ca96bc": {
+      "key": "sessions/01a2178a-658f-742c-8821-060261ca96bc",
+      "value": {
+        "id": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "name": "HC-2",
+        "label": "HC-2",
+        "kind": "peer",
+        "status": "idle",
+        "runner": "pi",
+        "transport": "host",
+        "cwd": "/home/arundaya/AndroidStudioProjects/HariKu_Cloned",
+        "sessionId": "01a2178a-658f-742c-8821-060261ca96bc",
+        "model": "9router/best-worth",
+        "thinking": "off",
+        "startedAt": 1795691285942,
+        "updatedAt": 1795691721230,
+        "pendingMessages": false,
+        "local": false
+      },
+      "version": 35905,
+      "updatedAt": 1795691721232,
+      "updatedBy": {
+        "id": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a2178a-658f-742c-8821-060261ca96bc"
+      }
+    },
+    "topology/participants/984377fa46485663e63d9e3993fd4930d621bd1dac972d15772049ea9e58be8a": {
+      "key": "topology/participants/984377fa46485663e63d9e3993fd4930d621bd1dac972d15772049ea9e58be8a",
+      "value": {
+        "format": 1,
+        "id": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "kind": "root",
+        "rootId": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "ownerHostId": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "ownerIdentityId": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "name": "main",
+        "status": "idle",
+        "runner": "pi",
+        "transport": "host",
+        "capabilities": [
+          "steer",
+          "followUp",
+          "fabric"
+        ],
+        "cwd": "/home/arundaya/AndroidStudioProjects/HariKu_Cloned",
+        "sessionId": "01a2178a-658f-742c-8821-060261ca96bc",
+        "model": "9router/best-worth",
+        "thinking": "off",
+        "startedAt": 1795691285942,
+        "updatedAt": 1795691721230,
+        "pendingMessages": false,
+        "controlProtocol": "v1",
+        "ownerIncarnation": "007f6078-5086-4f8a-ae26-e23d03f3ab27",
+        "label": "HC-2"
+      },
+      "version": 35906,
+      "updatedAt": 1795691721233,
+      "updatedBy": {
+        "id": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a2178a-658f-742c-8821-060261ca96bc"
+      }
+    },
+    "topology/hosts/984377fa46485663e63d9e3993fd4930d621bd1dac972d15772049ea9e58be8a": {
+      "key": "topology/hosts/984377fa46485663e63d9e3993fd4930d621bd1dac972d15772049ea9e58be8a",
+      "value": {
+        "format": 1,
+        "id": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "rootId": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "identity": {
+          "id": "session:01a2178a-658f-742c-8821-060261ca96bc",
+          "name": "main",
+          "kind": "main",
+          "sessionId": "01a2178a-658f-742c-8821-060261ca96bc"
+        },
+        "startedAt": 1795691285944,
+        "updatedAt": 1795691721234,
+        "expiresAt": 1795691736234
+      },
+      "version": 35907,
+      "updatedAt": 1795691721235,
+      "updatedBy": {
+        "id": "session:01a2178a-658f-742c-8821-060261ca96bc",
+        "name": "main",
+        "kind": "main",
+        "sessionId": "01a2178a-658f-742c-8821-060261ca96bc"
+      }
+    }
+  },
+  "highWater": 36084,
+  "versions": {
+    "topology/peer-seq": 3,
+    "sessions/01a1d9c1-347a-7132-83db-ef7192d9a6a0": 368,
+    "topology/participants/c821c7e29632bb1d1695401c5c534f1ddcd90b98f0b0a405e4b6363433a99f6e": 370,
+    "topology/hosts/c821c7e29632bb1d1695401c5c534f1ddcd90b98f0b0a405e4b6363433a99f6e": 371,
+    "sessions/01a1d9da-fffe-7132-83db-ef7357ccfaaf": 18666,
+    "topology/participants/7933bad54cd57074e7f3df3fe9cf86dd6f4dc2297385eca98611d8b4da176d7e": 18667,
+    "topology/hosts/7933bad54cd57074e7f3df3fe9cf86dd6f4dc2297385eca98611d8b4da176d7e": 18668,
+    "sessions/01a21788-eb62-700c-a5b0-19b4c7b3eeb6": 35792,
+    "topology/participants/74255fcb0ec5594060967d645250346327de5d17246c3f0090b62f32a6c95427": 35794,
+    "topology/hosts/74255fcb0ec5594060967d645250346327de5d17246c3f0090b62f32a6c95427": 35795,
+    "topology/peer-seq/3": 35787,
+    "topology/tombstones/74255fcb0ec5594060967d645250346327de5d17246c3f0090b62f32a6c95427": 35814,
+    "sessions/01a2178a-658f-742c-8821-060261ca96bc": 35905,
+    "topology/participants/984377fa46485663e63d9e3993fd4930d621bd1dac972d15772049ea9e58be8a": 35906,
+    "topology/hosts/984377fa46485663e63d9e3993fd4930d621bd1dac972d15772049ea9e58be8a": 35907
+  },
+  "tombstoneOrder": [
+    "sessions/01a1d9c1-347a-7132-83db-ef7192d9a6a0",
+    "topology/participants/c821c7e29632bb1d1695401c5c534f1ddcd90b98f0b0a405e4b6363433a99f6e",
+    "topology/hosts/c821c7e29632bb1d1695401c5c534f1ddcd90b98f0b0a405e4b6363433a99f6e",
+    "sessions/01a21788-eb62-700c-a5b0-19b4c7b3eeb6",
+    "topology/participants/74255fcb0ec5594060967d645250346327de5d17246c3f0090b62f32a6c95427",
+    "topology/hosts/74255fcb0ec5594060967d645250346327de5d17246c3f0090b62f32a6c95427"
+  ]
+}

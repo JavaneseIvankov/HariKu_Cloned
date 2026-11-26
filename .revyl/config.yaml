@@ -1,0 +1,28 @@
+project:
+    id: 15a73e3a-44de-4eff-802e-c529262da3c8
+session:
+    idle_timeout_seconds: 1800
+build:
+    framework: android
+    profiles:
+        development:
+            android:
+                app_id: 511af424-aaa9-4e24-bdbd-1d350c69b4e9
+                secrets:
+                    - GOOGLE_SERVICES_JSON
+                    - GEMINI_API_KEY
+                setup_commands:
+                    - 'printf "%s" "$GOOGLE_SERVICES_JSON" > app/google-services.json'
+                    - 'printf "gemini.api.key=%s" "$GEMINI_API_KEY" >> local.properties'
+                build_commands:
+                    - ./gradlew assembleDebug
+                output_path: app/build/outputs/apk/debug/app-debug.apk
+pr_review:
+    enabled: true
+    build:
+        kind: revyl
+        profile: development
+    proof_of_changes:
+        enabled: true
+        harness:
+            kind: revyl
