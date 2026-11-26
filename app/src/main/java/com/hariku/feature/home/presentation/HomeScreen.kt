@@ -24,6 +24,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,7 +61,7 @@ fun HomeScreen(
     onOpenJournalTab: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel()
 ) {
-    val user = viewModel.currentUser
+    val user by viewModel.currentUser.collectAsStateWithLifecycle()
     HomeContent(
         displayName = user?.name?.takeIf(String::isNotBlank) ?: "Selamat datang",
         photoUrl = user?.photoUrl,

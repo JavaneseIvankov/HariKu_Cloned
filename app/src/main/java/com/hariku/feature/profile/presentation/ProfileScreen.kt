@@ -67,8 +67,9 @@ fun ProfileScreen(
     onLogout: () -> Unit,
     viewModel: ProfileViewModel = koinViewModel()
 ) {
+    val user by viewModel.currentUser.collectAsStateWithLifecycle()
     ProfileContent(
-        user = viewModel.currentUser,
+        user = user,
         onBack = { navController.popBackStack() },
         onLogout = {
             viewModel.logout()
