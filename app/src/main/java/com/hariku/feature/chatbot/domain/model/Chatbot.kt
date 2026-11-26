@@ -6,6 +6,7 @@ data class Chatbot(
     val subtitle: String = "",
     val description: String = "",
     val avatarResId: Int = 0,
+    val avatarKey: String = "",
     val createdAt: Long = 0L,
     val userId: String = ""
 )

@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hariku.R
+import com.hariku.feature.chatbot.domain.model.ChatbotAvatarCatalog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +41,7 @@ fun ChatDetailTopBar(
     onBackClick: () -> Unit,
     onSosClick: () -> Unit
 ) {
+    val safeAvatarResId = ChatbotAvatarCatalog.safeDrawableResId(avatarResId)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp),
@@ -60,7 +62,7 @@ fun ChatDetailTopBar(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
-                        painter = painterResource(id = avatarResId),
+                        painter = painterResource(id = safeAvatarResId),
                         contentDescription = "Avatar Bot",
                         modifier = Modifier
                             .size(50.dp)

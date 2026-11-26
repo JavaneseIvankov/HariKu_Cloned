@@ -36,6 +36,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.hariku.R
 import com.hariku.core.ui.components.Routes
+import com.hariku.feature.chatbot.domain.model.ChatbotAvatarCatalog
 import com.hariku.feature.chatbot.presentation.components.ChatDetailTopBar
 import com.hariku.feature.chatbot.presentation.components.ChatTextFieldBar
 import com.hariku.feature.chatbot.presentation.components.MessageBubble
@@ -92,7 +93,13 @@ fun ChatbotDetailScreen(
         topBar = {
             ChatDetailTopBar(
                 chatbotId = uiState.chatbot?.name ?: chatbotId,
-                avatarResId = uiState.chatbot?.avatarResId ?: R.drawable.ic_avatar_hariku,
+                avatarResId = uiState.chatbot?.let {
+                    ChatbotAvatarCatalog.resolveDrawableResId(
+                        avatarKey = it.avatarKey,
+                        legacyResId = it.avatarResId,
+                        botName = it.name
+                    )
+                } ?: ChatbotAvatarCatalog.DEFAULT_AVATAR_RES_ID,
                 onBackClick = { navController.popBackStack() },
                 onSosClick = { navController.navigate(Routes.SosGraph.route) }
             )

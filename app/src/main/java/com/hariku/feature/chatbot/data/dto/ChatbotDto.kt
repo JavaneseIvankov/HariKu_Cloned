@@ -17,6 +17,9 @@ data class ChatbotDto(
     
     @PropertyName("avatarResId")
     val avatarResId: Int? = null,
+
+    @PropertyName("avatarKey")
+    val avatarKey: String? = null,
     
     @PropertyName("createdAt")
     val createdAt: Long? = null

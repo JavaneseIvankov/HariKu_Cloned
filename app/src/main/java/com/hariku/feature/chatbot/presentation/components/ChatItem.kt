@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hariku.feature.chatbot.domain.model.ChatbotAvatarCatalog
 import com.hariku.feature.chatbot.domain.model.ChatbotWithHistory
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -30,6 +31,11 @@ import java.util.Locale
 @Composable
 fun ChatItem(onClick: () -> Unit, chatbotWithHistory: ChatbotWithHistory) {
     val chatbot = chatbotWithHistory.chatbot
+    val avatarResId = ChatbotAvatarCatalog.resolveDrawableResId(
+        avatarKey = chatbot.avatarKey,
+        legacyResId = chatbot.avatarResId,
+        botName = chatbot.name
+    )
     val dateFormat = SimpleDateFormat("dd/MM", Locale.getDefault())
     val formattedDate = dateFormat.format(Date(chatbotWithHistory.lastMessageTime))
     
@@ -42,7 +48,7 @@ fun ChatItem(onClick: () -> Unit, chatbotWithHistory: ChatbotWithHistory) {
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Image(
-            painter = painterResource(id = chatbot.avatarResId),
+            painter = painterResource(id = avatarResId),
             contentDescription = "Avatar ${chatbot.name}",
             modifier = Modifier
                 .size(50.dp)

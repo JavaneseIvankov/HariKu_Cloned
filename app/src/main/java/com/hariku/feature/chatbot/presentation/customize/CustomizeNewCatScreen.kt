@@ -45,6 +45,7 @@ import com.hariku.R
 import com.hariku.core.ui.theme.HariKuTheme
 import com.hariku.core.ui.components.CustomizeTopBar
 import com.hariku.core.ui.components.Routes
+import com.hariku.feature.chatbot.domain.model.ChatbotAvatarCatalog
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,20 +57,7 @@ fun CustomizeNewCatScreen(
 ) {
     val uiState = viewModel.uiState
 
-    val avatarList = listOf(
-        R.drawable.ic_customize_cat_01,
-        R.drawable.ic_customize_cat_02,
-        R.drawable.ic_customize_cat_03,
-        R.drawable.ic_customize_cat_04,
-        R.drawable.ic_customize_cat_05,
-        R.drawable.ic_customize_cat_06,
-        R.drawable.ic_customize_cat_07,
-        R.drawable.ic_customize_cat_08,
-        R.drawable.ic_customize_cat_09,
-        R.drawable.ic_customize_cat_10,
-        R.drawable.ic_customize_cat_11,
-        R.drawable.ic_customize_cat_12
-    )
+    val avatarList = ChatbotAvatarCatalog.customAvatarResIds
 
     Scaffold(
         topBar = {

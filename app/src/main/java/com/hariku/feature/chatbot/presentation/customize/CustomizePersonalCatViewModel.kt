@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hariku.feature.chatbot.domain.model.Chatbot
+import com.hariku.feature.chatbot.domain.model.ChatbotAvatarCatalog
 import com.hariku.feature.chatbot.domain.usecase.AddChatbotUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -59,12 +60,15 @@ class CustomizePersonalCatViewModel(
                 val subtitle = buildSubtitle()
                 val description = buildDescription()
                 
+                val safeAvatarResId = ChatbotAvatarCatalog.safeDrawableResId(avatarResId)
                 val chatbot = Chatbot(
                     id = UUID.randomUUID().toString(),
                     name = name,
                     subtitle = subtitle,
                     description = description,
-                    avatarResId = avatarResId,
+                    avatarResId = safeAvatarResId,
+                    avatarKey = ChatbotAvatarCatalog.keyForDrawable(safeAvatarResId)
+                        ?: ChatbotAvatarCatalog.DEFAULT_AVATAR_KEY,
                     createdAt = System.currentTimeMillis(),
                     userId = userId
                 )
