@@ -87,6 +87,7 @@ class ChatbotDetailViewModel(
                         markMessagesAsReadUseCase(chatbotId, userId)
                     }
 
+                    var lastMarkedUnreadIds = emptySet<String>()
                     getChatMessagesUseCase(chatbotId, userId).collect { result ->
                         result.fold(
                             onSuccess = { messages ->
@@ -95,6 +96,15 @@ class ChatbotDetailViewModel(
                                     isLoading = false,
                                     error = null
                                 )
+                                val unreadBotIds = messages
+                                    .asSequence()
+                                    .filter { !it.isFromUser && !it.isRead }
+                                    .mapIndexed { index, message -> message.id.ifBlank { "idx_$index" } }
+                                    .toSet()
+                                if (unreadBotIds.isNotEmpty() && unreadBotIds != lastMarkedUnreadIds) {
+                                    lastMarkedUnreadIds = unreadBotIds
+                                    launch { markMessagesAsReadUseCase(chatbotId, userId) }
+                                }
                             },
                             onFailure = { exception ->
                                 uiState = uiState.copy(

@@ -29,6 +29,8 @@ class ChatbotFirebaseService(
         private const val COLLECTION_CHATBOTS = "chatbots"
         private const val SUBCOLLECTION_BOTS = "bots"
         private const val SUBCOLLECTION_MESSAGES = "messages"
+        internal const val FIELD_FROM_USER = "fromUser"
+        internal const val FIELD_READ = "read"
     }
     
     private fun getUserBotsCollection(userId: String) =
@@ -122,8 +124,8 @@ class ChatbotFirebaseService(
 
     fun observeUnreadCount(chatbotId: String, userId: String): Flow<Int> = callbackFlow {
         val listener = getBotMessagesCollection(userId, chatbotId)
-            .whereEqualTo("isFromUser", false)
-            .whereEqualTo("isRead", false)
+            .whereEqualTo(FIELD_FROM_USER, false)
+            .whereEqualTo(FIELD_READ, false)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     handleListenerError(error, 0)
@@ -137,8 +139,8 @@ class ChatbotFirebaseService(
 
     suspend fun getUnreadCount(chatbotId: String, userId: String): Int {
         val result = getBotMessagesCollection(userId, chatbotId)
-            .whereEqualTo("isFromUser", false)
-            .whereEqualTo("isRead", false)
+            .whereEqualTo(FIELD_FROM_USER, false)
+            .whereEqualTo(FIELD_READ, false)
             .get()
             .await()
         
@@ -164,14 +166,16 @@ class ChatbotFirebaseService(
     
     suspend fun markMessagesAsRead(chatbotId: String, userId: String) {
         val unreadMessages = getBotMessagesCollection(userId, chatbotId)
-            .whereEqualTo("isFromUser", false)
-            .whereEqualTo("isRead", false)
+            .whereEqualTo(FIELD_FROM_USER, false)
+            .whereEqualTo(FIELD_READ, false)
             .get()
             .await()
-        
+
+        if (unreadMessages.isEmpty) return
+
         val batch = firestore.batch()
         unreadMessages.documents.forEach { doc ->
-            batch.update(doc.reference, "isRead", true)
+            batch.update(doc.reference, FIELD_READ, true)
         }
         batch.commit().await()
     }
