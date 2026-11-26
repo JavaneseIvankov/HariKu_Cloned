@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,10 +27,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -58,6 +62,10 @@ fun GuidedJournalEditorScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val currentOnNavigateBack by rememberUpdatedState(onNavigateBack)
     val currentOnNavigateToCompleted by rememberUpdatedState(onNavigateToCompleted)
+    val titleBringIntoViewRequester = remember { BringIntoViewRequester() }
+    val contentBringIntoViewRequester = remember { BringIntoViewRequester() }
+    val titleFocusRequester = remember { FocusRequester() }
+    val contentFocusRequester = remember { FocusRequester() }
 
     SideEffect {
         viewModel.initialize(
@@ -77,6 +85,19 @@ fun GuidedJournalEditorScreen(
                         currentOnNavigateBack()
                     } else {
                         currentOnNavigateToCompleted()
+                    }
+                }
+                is GuidedJournalEditorEvent.FocusInvalidField -> {
+                    withFrameNanos {}
+                    when (event.field) {
+                        JournalEditorField.TITLE -> {
+                            titleBringIntoViewRequester.bringIntoView()
+                            titleFocusRequester.requestFocus()
+                        }
+                        JournalEditorField.CONTENT -> {
+                            contentBringIntoViewRequester.bringIntoView()
+                            contentFocusRequester.requestFocus()
+                        }
                     }
                 }
             }
@@ -110,7 +131,11 @@ fun GuidedJournalEditorScreen(
         onDismissDatePicker = viewModel::onDismissDatePicker,
         onDateSelected = viewModel::onDateSelected,
         onInsertTemplateFramework = viewModel::onInsertTemplateFramework,
-        onSaveJournal = viewModel::onSaveJournal
+        onSaveJournal = viewModel::onSaveJournal,
+        titleBringIntoViewRequester = titleBringIntoViewRequester,
+        contentBringIntoViewRequester = contentBringIntoViewRequester,
+        titleFocusRequester = titleFocusRequester,
+        contentFocusRequester = contentFocusRequester
     )
 }
 
@@ -135,7 +160,11 @@ fun GuidedJournalEditorContent(
     onDismissDatePicker: () -> Unit,
     onDateSelected: (Long) -> Unit,
     onInsertTemplateFramework: () -> Unit,
-    onSaveJournal: () -> Unit
+    onSaveJournal: () -> Unit,
+    titleBringIntoViewRequester: BringIntoViewRequester = remember { BringIntoViewRequester() },
+    contentBringIntoViewRequester: BringIntoViewRequester = remember { BringIntoViewRequester() },
+    titleFocusRequester: FocusRequester = remember { FocusRequester() },
+    contentFocusRequester: FocusRequester = remember { FocusRequester() }
 ) {
     val topBarTitle = when {
         state.isEditMode -> "Edit Jurnal"
@@ -238,7 +267,11 @@ fun GuidedJournalEditorContent(
                             onOpenTemplateSheet = onShowTemplateSheet,
                             onShowDatePicker = onShowDatePicker,
                             onInsertTemplateFramework = onInsertTemplateFramework,
-                            onSave = onSaveJournal
+                            onSave = onSaveJournal,
+                            titleBringIntoViewRequester = titleBringIntoViewRequester,
+                            contentBringIntoViewRequester = contentBringIntoViewRequester,
+                            titleFocusRequester = titleFocusRequester,
+                            contentFocusRequester = contentFocusRequester
                         )
                     }
                 }

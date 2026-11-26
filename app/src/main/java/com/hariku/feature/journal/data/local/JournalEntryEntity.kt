@@ -2,6 +2,7 @@ package com.hariku.feature.journal.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.hariku.core.auth.LOCAL_GUEST_USER_ID
 
 @Entity(tableName = "journal_entries")
 data class JournalEntryEntity(
@@ -13,5 +14,6 @@ data class JournalEntryEntity(
     val promptUsed: String = "",
     val isPinned: Boolean = false,
     val updatedAt: Long = dateMillis,
+    val userId: String = LOCAL_GUEST_USER_ID,
     @PrimaryKey(autoGenerate = true) val id: Long = 0L
 )

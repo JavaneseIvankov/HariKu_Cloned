@@ -241,6 +241,8 @@ class JournalAuditFixesTest {
         override fun observeMoodEntries(): Flow<List<MoodEntry>> = flowOf(emptyList())
         override suspend fun saveMood(mood: MoodType, note: String, timestamp: Long): Result<Long> =
             Result.success(1L)
+        override suspend fun updateMood(entryId: Long, mood: MoodType, note: String): Result<Unit> =
+            Result.success(Unit)
         override suspend fun deleteMood(entryId: Long): Result<Unit> = Result.success(Unit)
     }
 

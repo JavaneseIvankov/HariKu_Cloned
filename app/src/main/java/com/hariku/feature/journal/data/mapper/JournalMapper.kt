@@ -1,5 +1,6 @@
 package com.hariku.feature.journal.data.mapper
 
+import com.hariku.core.auth.LOCAL_GUEST_USER_ID
 import com.hariku.feature.journal.data.local.JournalEntryEntity
 import com.hariku.feature.journal.domain.model.CbtTemplateType
 import com.hariku.feature.journal.domain.model.JournalCategoryTag
@@ -19,8 +20,9 @@ object JournalMapper {
         updatedAt = entity.updatedAt
     )
 
-    fun toEntity(model: JournalEntry): JournalEntryEntity = JournalEntryEntity(
+    fun toEntity(model: JournalEntry, userId: String = LOCAL_GUEST_USER_ID): JournalEntryEntity = JournalEntryEntity(
         id = model.id,
+        userId = userId,
         title = model.title,
         content = model.content,
         dateMillis = model.dateMillis,

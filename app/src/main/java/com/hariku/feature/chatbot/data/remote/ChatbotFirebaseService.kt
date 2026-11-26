@@ -93,6 +93,36 @@ class ChatbotFirebaseService(
         return result.documents.firstOrNull()?.toObject(ChatMessageDto::class.java)
     }
     
+    fun observeLastMessage(chatbotId: String, userId: String): Flow<ChatMessageDto?> = callbackFlow {
+        val listener = getBotMessagesCollection(userId, chatbotId)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(1)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.documents?.firstOrNull()?.toObject(ChatMessageDto::class.java))
+            }
+
+        awaitClose { listener.remove() }
+    }
+
+    fun observeUnreadCount(chatbotId: String, userId: String): Flow<Int> = callbackFlow {
+        val listener = getBotMessagesCollection(userId, chatbotId)
+            .whereEqualTo("isFromUser", false)
+            .whereEqualTo("isRead", false)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.size() ?: 0)
+            }
+
+        awaitClose { listener.remove() }
+    }
+
     suspend fun getUnreadCount(chatbotId: String, userId: String): Int {
         val result = getBotMessagesCollection(userId, chatbotId)
             .whereEqualTo("isFromUser", false)

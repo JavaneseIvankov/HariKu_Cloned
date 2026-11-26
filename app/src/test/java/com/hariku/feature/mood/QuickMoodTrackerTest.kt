@@ -16,6 +16,7 @@ import com.hariku.feature.mood.presentation.QuickMoodUiState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -300,16 +301,17 @@ class QuickMoodTrackerTest {
             return id
         }
 
-        override fun observeEntries(): Flow<List<MoodEntryEntity>> = items
+        override fun observeEntries(userId: String): Flow<List<MoodEntryEntity>> =
+            items.map { list -> list.filter { it.userId == userId } }
 
-        override suspend fun updateById(entryId: Long, moodType: String, note: String) {
+        override suspend fun updateById(entryId: Long, userId: String, moodType: String, note: String) {
             items.value = items.value.map { entry ->
-                if (entry.id == entryId) entry.copy(moodType = moodType, note = note) else entry
+                if (entry.id == entryId && entry.userId == userId) entry.copy(moodType = moodType, note = note) else entry
             }
         }
 
-        override suspend fun deleteById(entryId: Long) {
-            items.value = items.value.filterNot { it.id == entryId }
+        override suspend fun deleteById(entryId: Long, userId: String) {
+            items.value = items.value.filterNot { it.id == entryId && it.userId == userId }
         }
     }
 }

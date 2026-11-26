@@ -318,6 +318,12 @@ class GuidedJournalEditorViewModel(
                     contentError = contentErr
                 )
             }
+            val invalidField = if (titleErr != null) {
+                JournalEditorField.TITLE
+            } else {
+                JournalEditorField.CONTENT
+            }
+            sendEvent(GuidedJournalEditorEvent.FocusInvalidField(invalidField))
             return
         }
 

@@ -9,14 +9,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface JournalDao {
-    @Query("SELECT * FROM journal_entries ORDER BY isPinned DESC, dateMillis DESC, id DESC")
-    fun observeAll(): Flow<List<JournalEntryEntity>>
+    @Query("SELECT * FROM journal_entries WHERE userId = :userId ORDER BY isPinned DESC, dateMillis DESC, id DESC")
+    fun observeAll(userId: String): Flow<List<JournalEntryEntity>>
 
-    @Query("SELECT * FROM journal_entries WHERE id = :id LIMIT 1")
-    suspend fun getById(id: Long): JournalEntryEntity?
+    @Query("SELECT * FROM journal_entries WHERE id = :id AND userId = :userId LIMIT 1")
+    suspend fun getById(id: Long, userId: String): JournalEntryEntity?
 
-    @Query("SELECT tag FROM journal_entries ORDER BY updatedAt DESC, id DESC LIMIT 1")
-    fun getLatestTag(): Flow<String?>
+    @Query("SELECT tag FROM journal_entries WHERE userId = :userId ORDER BY updatedAt DESC, id DESC LIMIT 1")
+    fun getLatestTag(userId: String): Flow<String?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entry: JournalEntryEntity): Long
@@ -24,9 +24,9 @@ interface JournalDao {
     @Update
     suspend fun update(entry: JournalEntryEntity): Int
 
-    @Query("DELETE FROM journal_entries WHERE id = :id")
-    suspend fun delete(id: Long)
+    @Query("DELETE FROM journal_entries WHERE id = :id AND userId = :userId")
+    suspend fun delete(id: Long, userId: String)
 
-    @Query("UPDATE journal_entries SET isPinned = NOT isPinned WHERE id = :id")
-    suspend fun togglePin(id: Long)
+    @Query("UPDATE journal_entries SET isPinned = NOT isPinned WHERE id = :id AND userId = :userId")
+    suspend fun togglePin(id: Long, userId: String)
 }

@@ -169,7 +169,7 @@ fun SensesScreen(onExit: () -> Unit) {
                         fontFamily = ExerciseFont,
                         fontSize = 14.sp,
                         lineHeight = 18.sp,
-                        textAlign = TextAlign.Justify
+                        textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(18.dp))
                     Button(

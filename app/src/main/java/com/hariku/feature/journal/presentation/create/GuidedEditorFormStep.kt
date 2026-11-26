@@ -17,8 +17,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -69,7 +73,11 @@ internal fun JournalEditorStepSection(
     onShowDatePicker: () -> Unit,
     onInsertTemplateFramework: () -> Unit,
     onSave: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    titleBringIntoViewRequester: BringIntoViewRequester = remember { BringIntoViewRequester() },
+    contentBringIntoViewRequester: BringIntoViewRequester = remember { BringIntoViewRequester() },
+    titleFocusRequester: FocusRequester = remember { FocusRequester() },
+    contentFocusRequester: FocusRequester = remember { FocusRequester() }
 ) {
     val dateFormatter = remember {
         DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy", Locale.forLanguageTag("id-ID"))
@@ -140,7 +148,10 @@ internal fun JournalEditorStepSection(
                     )
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(
+                    modifier = Modifier.bringIntoViewRequester(titleBringIntoViewRequester),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -166,7 +177,9 @@ internal fun JournalEditorStepSection(
                         singleLine = false,
                         maxLines = 2,
                         isError = state.titleError != null,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(titleFocusRequester),
                         shape = RoundedCornerShape(14.dp),
                         placeholder = {
                             Text(
@@ -373,7 +386,10 @@ internal fun JournalEditorStepSection(
                     }
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(
+                    modifier = Modifier.bringIntoViewRequester(contentBringIntoViewRequester),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -399,7 +415,8 @@ internal fun JournalEditorStepSection(
                         isError = state.contentError != null,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(220.dp),
+                            .height(220.dp)
+                            .focusRequester(contentFocusRequester),
                         shape = RoundedCornerShape(16.dp),
                         placeholder = {
                             Text(

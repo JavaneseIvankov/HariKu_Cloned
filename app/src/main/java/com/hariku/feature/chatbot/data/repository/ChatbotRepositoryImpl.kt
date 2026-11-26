@@ -9,8 +9,12 @@ import com.hariku.feature.chatbot.domain.model.Chatbot
 import com.hariku.feature.chatbot.domain.model.ChatMessage
 import com.hariku.feature.chatbot.domain.model.ChatbotWithHistory
 import com.hariku.feature.chatbot.domain.repository.ChatbotRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
@@ -64,22 +68,29 @@ class ChatbotRepositoryImpl(
         }
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun getChatbotsWithHistory(userId: String): Flow<Result<List<ChatbotWithHistory>>> {
         return firebaseService.getChatbots(userId)
-            .map { dtoList ->
-                val chatbotsWithHistory = dtoList.map { dto ->
+            .flatMapLatest { dtoList ->
+                val historyFlows = dtoList.map { dto ->
                     val chatbot = mapper.toDomain(dto, userId)
-                    val lastMessage = firebaseService.getLastMessage(chatbot.id, userId)
-                    val unreadCount = firebaseService.getUnreadCount(chatbot.id, userId)
-                    
-                    ChatbotWithHistory(
-                        chatbot = chatbot,
-                        lastMessage = lastMessage?.message ?: "Belum ada percakapan",
-                        lastMessageTime = lastMessage?.timestamp ?: chatbot.createdAt,
-                        unreadCount = unreadCount
-                    )
+                    combine(
+                        firebaseService.observeLastMessage(chatbot.id, userId),
+                        firebaseService.observeUnreadCount(chatbot.id, userId)
+                    ) { lastMessage, unreadCount ->
+                        ChatbotWithHistory(
+                            chatbot = chatbot,
+                            lastMessage = lastMessage?.message ?: "Belum ada percakapan",
+                            lastMessageTime = lastMessage?.timestamp ?: chatbot.createdAt,
+                            unreadCount = unreadCount
+                        )
+                    }
                 }
-                Result.success(chatbotsWithHistory)
+                if (historyFlows.isEmpty()) {
+                    flowOf(Result.success(emptyList<ChatbotWithHistory>()))
+                } else {
+                    combine(historyFlows) { items -> Result.success(items.toList()) }
+                }
             }
             .catch { exception ->
                 emit(Result.failure(exception))

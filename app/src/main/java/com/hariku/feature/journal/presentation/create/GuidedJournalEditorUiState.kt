@@ -73,7 +73,13 @@ data class GuidedJournalEditorUiState(
         get() = editingJournalId != null
 }
 
+enum class JournalEditorField {
+    TITLE,
+    CONTENT
+}
+
 sealed interface GuidedJournalEditorEvent {
     data object NavigateBack : GuidedJournalEditorEvent
     data class JournalSaved(val isEditMode: Boolean) : GuidedJournalEditorEvent
+    data class FocusInvalidField(val field: JournalEditorField) : GuidedJournalEditorEvent
 }

@@ -104,19 +104,6 @@ class PsychologicalContextProviderImpl(
     companion object {
         fun observeFirebaseUserIdFlow(
             authProvider: () -> FirebaseAuth? = { runCatching { FirebaseAuth.getInstance() }.getOrNull() }
-        ): Flow<String?> = callbackFlow {
-            val auth = runCatching { authProvider() }.getOrNull()
-            if (auth == null) {
-                trySend(null)
-                close()
-                return@callbackFlow
-            }
-            val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-                trySend(firebaseAuth.currentUser?.uid)
-            }
-            trySend(auth.currentUser?.uid)
-            auth.addAuthStateListener(listener)
-            awaitClose { auth.removeAuthStateListener(listener) }
-        }.distinctUntilChanged()
+        ): Flow<String?> = com.hariku.core.auth.observeCurrentUserIdFlow(authProvider)
     }
 }

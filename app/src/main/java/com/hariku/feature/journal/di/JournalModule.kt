@@ -1,6 +1,7 @@
 package com.hariku.feature.journal.di
 
 import com.google.firebase.auth.FirebaseAuth
+import com.hariku.core.auth.observeCurrentUserIdFlow
 import com.hariku.feature.journal.data.local.JournalDatabase
 import com.hariku.feature.journal.data.provider.PsychologicalContextProviderImpl
 import com.hariku.feature.journal.data.repository.JournalRepositoryImpl
@@ -22,7 +23,12 @@ import org.koin.dsl.module
 val journalModule = module {
     single { JournalDatabase.open(androidContext()) }
     single { get<JournalDatabase>().journalDao() }
-    single<JournalRepository> { JournalRepositoryImpl(journalDao = get()) }
+    single<JournalRepository> {
+        JournalRepositoryImpl(
+            journalDao = get(),
+            userIdFlow = observeCurrentUserIdFlow { runCatching { get<FirebaseAuth>() }.getOrNull() }
+        )
+    }
     single<PsychologicalContextProvider> {
         PsychologicalContextProviderImpl(
             moodRepository = get(),
