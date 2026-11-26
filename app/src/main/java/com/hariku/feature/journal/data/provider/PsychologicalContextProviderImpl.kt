@@ -48,7 +48,7 @@ class PsychologicalContextProviderImpl(
             } else {
                 val eviScore = VolatilityCalculator.calculateEvi(moodEntries)
                 val eviLevel = VolatilityCalculator.classify(eviScore)
-                val adsScore = AnxietyLexiconAnalyzer.analyzeLatest(userMessages)
+                val adsScore = AnxietyLexiconAnalyzer.analyzeLatestWithDecay(userMessages)
                 val adsLevel = AnxietyLexiconAnalyzer.classify(adsScore)
                 PsychologicalMetrics(
                     eviScore = eviScore,
@@ -63,7 +63,7 @@ class PsychologicalContextProviderImpl(
             .flowOn(defaultDispatcher)
     }
 
-    private fun observeLatestUserMessages(): Flow<List<String>> =
+    private fun observeLatestUserMessages(): Flow<List<AnxietyLexiconAnalyzer.TimedMessage>> =
         userIdFlow
             .distinctUntilChanged()
             .flatMapLatest { userId ->
@@ -85,7 +85,12 @@ class PsychologicalContextProviderImpl(
                                             messagesResult.getOrDefault(emptyList())
                                                 .filter { it.isFromUser }
                                                 .sortedBy { it.timestamp }
-                                                .map { it.message }
+                                                .map {
+                                                    AnxietyLexiconAnalyzer.TimedMessage(
+                                                        text = it.message,
+                                                        timestampMillis = it.timestamp
+                                                    )
+                                                }
                                         }
                                         .catch { emit(emptyList()) }
                                 }

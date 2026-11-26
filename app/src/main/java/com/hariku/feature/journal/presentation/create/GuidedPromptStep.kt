@@ -126,13 +126,7 @@ internal fun SelectPromptStepSection(
                 )
 
                 Text(
-                    text = buildString {
-                        append(state.recommendation.reason)
-                        append(" Konteks topik: ${state.recommendation.contextTag}.")
-                        if (state.selectedFeelings.isNotEmpty()) {
-                            append(" Perasaan dipilih: ${state.selectedFeelings.joinToString(", ")}.")
-                        }
-                    },
+                    text = state.checkInReason,
                     fontSize = 12.sp,
                     color = JournalDesignTokens.TextSecondary,
                     lineHeight = 17.sp

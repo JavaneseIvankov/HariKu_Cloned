@@ -68,7 +68,7 @@ class GuidedJournalEditorViewModel(
                 isTemplateManuallyOverridden = parsedTemplate != null,
                 title = prefillTitle?.take(SaveJournalEntryUseCase.MAX_TITLE_LENGTH) ?: state.title
             )
-            nextState.copy(dynamicPrompts = computeDynamicPrompts(nextState))
+            applyAdaptivePromptResolution(nextState)
         }
     }
 
@@ -99,7 +99,7 @@ class GuidedJournalEditorViewModel(
                             isPinned = entry.isPinned,
                             saveError = null
                         )
-                        updated.copy(dynamicPrompts = computeDynamicPrompts(updated))
+                        applyAdaptivePromptResolution(updated)
                     }
                 },
                 onFailure = { error ->
@@ -120,16 +120,8 @@ class GuidedJournalEditorViewModel(
                 .catch { /* Gunakan fallback netral jika stream gagal */ }
                 .collect { recommendation ->
                     _uiState.update { state ->
-                        val effectiveTemplate = if (state.isTemplateManuallyOverridden || state.isEditMode) {
-                            state.selectedTemplate
-                        } else {
-                            resolveTemplateWithFeelings(recommendation, state.selectedFeelings)
-                        }
-                        val nextState = state.copy(
-                            recommendation = recommendation,
-                            selectedTemplate = effectiveTemplate
-                        )
-                        nextState.copy(dynamicPrompts = computeDynamicPrompts(nextState))
+                        val nextState = state.copy(recommendation = recommendation)
+                        applyAdaptivePromptResolution(nextState)
                     }
                 }
         }
@@ -142,53 +134,31 @@ class GuidedJournalEditorViewModel(
             } else {
                 state.selectedFeelings + feeling
             }
-            val suggestedTag = if (state.hasUserPickedTag) {
-                state.selectedTag
-            } else {
-                inferCategoryFromFeelings(nextFeelings) ?: state.selectedTag
-            }
-            val effectiveTemplate = if (state.isTemplateManuallyOverridden || state.isEditMode) {
-                state.selectedTemplate
-            } else {
-                resolveTemplateWithFeelings(state.recommendation, nextFeelings)
-            }
-            val nextState = state.copy(
-                selectedFeelings = nextFeelings,
-                selectedTag = suggestedTag,
-                selectedTemplate = effectiveTemplate
-            )
-            nextState.copy(dynamicPrompts = computeDynamicPrompts(nextState))
+            applyAdaptivePromptResolution(state.copy(selectedFeelings = nextFeelings))
         }
     }
 
     fun onCustomFeelingNoteChange(value: String) {
         _uiState.update { state ->
-            val nextState = state.copy(customFeelingNote = value.take(160))
-            nextState.copy(dynamicPrompts = computeDynamicPrompts(nextState))
+            applyAdaptivePromptResolution(state.copy(customFeelingNote = value.take(160)))
         }
     }
 
     fun onProceedFromCheckIn() {
         _uiState.update { state ->
-            val updated = state.copy(currentStep = GuidedJournalStep.SELECT_PROMPT)
-            updated.copy(dynamicPrompts = computeDynamicPrompts(updated))
+            applyAdaptivePromptResolution(state.copy(currentStep = GuidedJournalStep.SELECT_PROMPT))
         }
     }
 
     fun onSkipCheckIn() {
         _uiState.update { state ->
-            val effectiveTemplate = if (state.isTemplateManuallyOverridden) {
-                state.selectedTemplate
-            } else {
-                state.recommendation.template
-            }
-            val updated = state.copy(
-                selectedFeelings = emptySet(),
-                customFeelingNote = "",
-                selectedTemplate = effectiveTemplate,
-                currentStep = GuidedJournalStep.SELECT_PROMPT
+            applyAdaptivePromptResolution(
+                state.copy(
+                    selectedFeelings = emptySet(),
+                    customFeelingNote = "",
+                    currentStep = GuidedJournalStep.SELECT_PROMPT
+                )
             )
-            updated.copy(dynamicPrompts = computeDynamicPrompts(updated))
         }
     }
 
@@ -280,7 +250,7 @@ class GuidedJournalEditorViewModel(
                 isTemplateManuallyOverridden = true,
                 activeModal = EditorModal.None
             )
-            updated.copy(dynamicPrompts = computeDynamicPrompts(updated))
+            applyAdaptivePromptResolution(updated)
         }
     }
 
@@ -409,60 +379,33 @@ class GuidedJournalEditorViewModel(
         }
     }
 
-    private fun resolveTemplateWithFeelings(
-        recommendation: JournalPromptRecommendation,
-        feelings: Set<String>
-    ): CbtTemplateType {
-        // Prioritas utama selalu metrik EVI & ADS aktual sesuai Flowchart 2.2.3
-        if (!recommendation.metrics.isDefaultFallback) {
-            return recommendation.template
+    private fun applyAdaptivePromptResolution(state: GuidedJournalEditorUiState): GuidedJournalEditorUiState {
+        val latestTag = JournalCategoryTag.entries.firstOrNull {
+            AdaptivePromptEngine.resolveContextTag(it) == state.recommendation.contextTag
         }
-        // Jika pengguna baru belum punya riwayat EVI/ADS, check-in Step 1 membantu mempersonalisasi template
-        return when {
-            feelings.any { it in setOf("Cemas", "Takut") } -> CbtTemplateType.COGNITIVE_REFRAMING
-            feelings.any { it in setOf("Marah", "Muak", "Sedih") } -> CbtTemplateType.BEHAVIORAL_ACTIVATION
-            feelings.any { it in setOf("Stress", "Kecewa", "Malu", "Lelah") } -> CbtTemplateType.THOUGHT_RECORD
-            else -> recommendation.template
+        val overrideTemplate = if (state.isTemplateManuallyOverridden || state.isEditMode) {
+            state.selectedTemplate
+        } else {
+            null
         }
-    }
-
-    private fun inferCategoryFromFeelings(feelings: Set<String>): JournalCategoryTag? = when {
-        feelings.any { it in setOf("Cemas", "Takut") } -> JournalCategoryTag.KECEMASAN
-        feelings.any { it in setOf("Stress", "Muak") } -> JournalCategoryTag.STRES
-        feelings.any { it == "Lelah" } -> JournalCategoryTag.TIDUR
-        feelings.any { it in setOf("Termotivasi", "Ingin Fokus", "Bosan") } -> JournalCategoryTag.PRODUKTIVITAS
-        feelings.any { it in setOf("Kesepian", "Kecewa", "Malu") } -> JournalCategoryTag.HUBUNGAN
-        feelings.any { it in setOf("Senang", "Damai") } -> JournalCategoryTag.POSITIVITAS
-        else -> null
-    }
-
-    private fun computeDynamicPrompts(state: GuidedJournalEditorUiState): List<String> {
-        val contextSlotValue = state.recommendation.contextTag
-        val baseQuestions = AdaptivePromptEngine.questionsFor(state.selectedTemplate)
-            .map { question -> AdaptivePromptEngine.injectContext(question, contextSlotValue) }
-
-        val feelingLabels = buildList {
-            addAll(state.selectedFeelings.map { it.lowercase() })
-            state.customFeelingNote.trim().takeIf { it.isNotEmpty() }?.let { add(it) }
+        val resolved = AdaptivePromptEngine.recommendWithCheckIn(
+            metrics = state.recommendation.metrics,
+            latestTag = latestTag,
+            selectedFeelings = state.selectedFeelings,
+            customFeelingNote = state.customFeelingNote,
+            templateOverride = overrideTemplate
+        )
+        val nextTag = if (state.hasUserPickedTag) {
+            state.selectedTag
+        } else {
+            resolved.suggestedCategory ?: JournalCategoryTag.UMUM
         }
-
-        if (feelingLabels.isEmpty()) {
-            return baseQuestions
-        }
-
-        val feelingSummary = feelingLabels.take(3).joinToString(", ")
-        val personalizedPrompt = when (state.selectedTemplate) {
-            CbtTemplateType.COGNITIVE_REFRAMING ->
-                "Kamu sedang merasa $feelingSummary. Pikiran apa terkait $contextSlotValue yang paling memicu rasa itu, dan bagaimana fakta nyatanya?"
-            CbtTemplateType.BEHAVIORAL_ACTIVATION ->
-                "Saat merasa $feelingSummary, langkah kecil apa terkait $contextSlotValue yang bisa membuatmu sedikit lebih tenang hari ini?"
-            CbtTemplateType.THOUGHT_RECORD ->
-                "Kamu mencatat perasaan $feelingSummary. Situasi apa pada $contextSlotValue yang memicunya, dan apa respon alternatif yang lebih seimbang?"
-            CbtTemplateType.GENERAL_REFLECTION ->
-                "Kamu merasa $feelingSummary hari ini. Bagaimana $contextSlotValue memengaruhi harimu dan apa yang patut kamu apresiasi dari dirimu?"
-        }
-
-        return listOf(personalizedPrompt) + baseQuestions
+        return state.copy(
+            selectedTemplate = overrideTemplate ?: resolved.template,
+            selectedTag = nextTag,
+            dynamicPrompts = resolved.prompts,
+            checkInReason = resolved.reason
+        )
     }
 
     private fun buildFinalContentWithCheckIn(

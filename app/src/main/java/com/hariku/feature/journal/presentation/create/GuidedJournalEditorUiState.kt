@@ -55,6 +55,7 @@ data class GuidedJournalEditorUiState(
     val isTemplateManuallyOverridden: Boolean = false,
     val dynamicPrompts: List<String> = AdaptivePromptEngine.questionsFor(CbtTemplateType.GENERAL_REFLECTION)
         .map { AdaptivePromptEngine.injectContext(it, null) },
+    val checkInReason: String = recommendation.reason,
     val selectedPrompt: String = "",
     val title: String = "",
     val content: String = "",

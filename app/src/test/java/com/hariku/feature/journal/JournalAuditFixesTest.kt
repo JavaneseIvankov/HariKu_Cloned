@@ -5,9 +5,14 @@ import com.hariku.feature.chatbot.domain.model.Chatbot
 import com.hariku.feature.chatbot.domain.model.ChatbotWithHistory
 import com.hariku.feature.chatbot.domain.repository.ChatbotRepository
 import com.hariku.feature.journal.data.provider.PsychologicalContextProviderImpl
+import com.hariku.feature.journal.domain.engine.AdaptivePromptEngine
+import com.hariku.feature.journal.domain.engine.AnxietyLexiconAnalyzer
 import com.hariku.feature.journal.domain.model.AdsLevel
+import com.hariku.feature.journal.domain.model.CbtTemplateType
+import com.hariku.feature.journal.domain.model.EviLevel
 import com.hariku.feature.journal.domain.model.JournalCategoryTag
 import com.hariku.feature.journal.domain.model.JournalEntry
+import com.hariku.feature.journal.domain.model.PsychologicalMetrics
 import com.hariku.feature.journal.domain.repository.JournalRepository
 import com.hariku.feature.journal.domain.usecase.DeleteJournalEntryUseCase
 import com.hariku.feature.journal.domain.usecase.GetAdaptivePromptUseCase
@@ -138,6 +143,80 @@ class JournalAuditFixesTest {
         assertEquals(LocalTime.of(14, 30), nyMerged.toLocalTime())
     }
 
+    @Test
+    fun anxietyLexiconAnalyzer_appliesTimeDecayForOldMessages() {
+        val now = 1_764_000_000_000L
+        val text = "cemas panik takut gelisah" // 4/4 = 1.0 raw ADS
+
+        val recent = AnxietyLexiconAnalyzer.analyzeLatestWithDecay(
+            messages = listOf(AnxietyLexiconAnalyzer.TimedMessage(text, now - 60_000L)),
+            nowMillis = now
+        )
+        assertEquals(1.0, recent, 0.001)
+
+        val threeDaysOld = AnxietyLexiconAnalyzer.analyzeLatestWithDecay(
+            messages = listOf(AnxietyLexiconAnalyzer.TimedMessage(text, now - 3L * 24 * 60 * 60 * 1000)),
+            nowMillis = now
+        )
+        assertEquals(0.5, threeDaysOld, 0.001)
+
+        val tenDaysOld = AnxietyLexiconAnalyzer.analyzeLatestWithDecay(
+            messages = listOf(AnxietyLexiconAnalyzer.TimedMessage(text, now - 10L * 24 * 60 * 60 * 1000)),
+            nowMillis = now
+        )
+        assertEquals(0.0, tenDaysOld, 0.001)
+    }
+
+    @Test
+    fun adaptivePromptEngine_mapsNaturalContextPhrasesAndIgnoresUmum() {
+        assertEquals(null, AdaptivePromptEngine.resolveContextTag(JournalCategoryTag.UMUM))
+        assertEquals(
+            "urusan kuliah atau tugasmu",
+            AdaptivePromptEngine.resolveContextTag(JournalCategoryTag.AKADEMIK)
+        )
+        val rec = AdaptivePromptEngine.recommend(null, JournalCategoryTag.UMUM)
+        assertEquals(AdaptivePromptEngine.CONTEXT_FALLBACK, rec.contextTag)
+        assertFalse(rec.prompt.contains(" umum ", ignoreCase = true))
+    }
+
+    @Test
+    fun adaptivePromptEngine_weightedScoringAndValenceResolution() {
+        // 1. Murni positif tidak memaksakan tag cemas lama
+        val positiveResult = AdaptivePromptEngine.recommendWithCheckIn(
+            metrics = PsychologicalMetrics(
+                eviScore = 0.15,
+                eviLevel = EviLevel.STABIL,
+                adsScore = 0.5,
+                adsLevel = AdsLevel.TINGGI
+            ),
+            latestTag = JournalCategoryTag.KECEMASAN,
+            selectedFeelings = setOf("Senang", "Termotivasi", "Damai")
+        )
+        assertEquals(AdaptivePromptEngine.PromptTone.POSITIVE, positiveResult.tone)
+        assertEquals(CbtTemplateType.GENERAL_REFLECTION, positiveResult.template)
+        assertFalse(positiveResult.prompts.first().contains("kecemasan", ignoreCase = true))
+
+        // 2. Kombinasi berat (Lelah + Cemas + Sedih) eskalasi ke Behavioral Activation (6 vs 3)
+        val heavyCombo = AdaptivePromptEngine.recommendWithCheckIn(
+            metrics = PsychologicalMetrics.NEUTRAL,
+            latestTag = JournalCategoryTag.UMUM,
+            selectedFeelings = setOf("Lelah", "Cemas", "Sedih")
+        )
+        assertEquals(AdaptivePromptEngine.PromptTone.SUPPORTIVE, heavyCombo.tone)
+        assertEquals(CbtTemplateType.BEHAVIORAL_ACTIVATION, heavyCombo.template)
+
+        // 3. Campuran (Cemas + Ingin Fokus) + catatan bebas menjadi prioritas konteks #1
+        val mixedCombo = AdaptivePromptEngine.recommendWithCheckIn(
+            metrics = PsychologicalMetrics.NEUTRAL,
+            latestTag = JournalCategoryTag.AKADEMIK,
+            selectedFeelings = setOf("Cemas", "Ingin Fokus"),
+            customFeelingNote = "presentasi besok pagi"
+        )
+        assertEquals(AdaptivePromptEngine.PromptTone.MIXED, mixedCombo.tone)
+        assertEquals(CbtTemplateType.COGNITIVE_REFRAMING, mixedCombo.template)
+        assertTrue(mixedCombo.prompts.first().contains("presentasi besok pagi"))
+    }
+
     private class FakeRaceJournalRepository(initial: List<JournalEntry>) : JournalRepository {
         private val entriesFlow = MutableStateFlow(initial)
 
@@ -197,7 +276,7 @@ class JournalAuditFixesTest {
                             userId = userId,
                             message = "aku cemas panik takut gelisah",
                             isFromUser = true,
-                            timestamp = 1000L
+                            timestamp = System.currentTimeMillis()
                         )
                     )
                 )
