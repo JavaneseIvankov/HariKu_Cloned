@@ -182,7 +182,14 @@ private fun HariKuNavigation(onSosVisibilityChanged: (Boolean) -> Unit) {
         composable("journal_detail/{journalId}") { entry ->
             JournalDetailScreen(
                 journalId = entry.arguments?.getString("journalId")?.toLongOrNull() ?: 0L,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Routes.Home.route) {
+                            popUpTo(Routes.Home.route) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                },
                 onEditJournal = { id -> navController.navigate("${Routes.CreateNotePrompt.route}?journalId=$id") }
             )
         }

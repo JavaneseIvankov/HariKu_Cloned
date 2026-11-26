@@ -20,18 +20,27 @@ object VolatilityCalculator {
     }
 
     /** SMA skor mood dalam 7 hari terakhir hingga entri terbaru; null bila kosong. */
-    fun calculateSma7(entries: List<MoodEntry>): Double? {
-        val latest = entries.maxOfOrNull { it.timestamp } ?: return null
-        val from = latest - WINDOW_DAYS * DAY_MILLIS
-        val window = entries.filter { it.timestamp > from }
+    fun calculateSma7(
+        entries: List<MoodEntry>,
+        nowMillis: Long = System.currentTimeMillis()
+    ): Double? {
+        val from = nowMillis - WINDOW_DAYS * DAY_MILLIS
+        val window = entries.filter { it.timestamp in (from + 1)..nowMillis }
         if (window.isEmpty()) return null
         return window.map { moodScore(it.mood) }.average()
     }
 
-    /** EVI = |skor mood terbaru - SMA7|. Tanpa data = 0.0. */
-    fun calculateEvi(entries: List<MoodEntry>): Double {
-        val latestEntry = entries.maxByOrNull { it.timestamp } ?: return 0.0
-        val sma = calculateSma7(entries) ?: return 0.0
+    /** EVI = |skor mood terbaru dalam 7 hari terakhir - SMA7|. Tanpa data = 0.0. */
+    fun calculateEvi(
+        entries: List<MoodEntry>,
+        nowMillis: Long = System.currentTimeMillis()
+    ): Double {
+        val from = nowMillis - WINDOW_DAYS * DAY_MILLIS
+        val latestEntry = entries
+            .filter { it.timestamp in (from + 1)..nowMillis }
+            .maxByOrNull { it.timestamp }
+            ?: return 0.0
+        val sma = calculateSma7(entries, nowMillis) ?: return 0.0
         return abs(moodScore(latestEntry.mood) - sma)
     }
 

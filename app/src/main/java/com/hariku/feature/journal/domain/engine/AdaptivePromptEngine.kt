@@ -253,7 +253,8 @@ object AdaptivePromptEngine {
             positiveFeelings = positiveFeelings,
             heavyFeelings = heavyFeelings,
             customNote = trimmedNote,
-            contextPhrase = contextPhrase
+            contextPhrase = contextPhrase,
+            preserveTemplateQuestions = templateOverride != null
         )
 
         val suggestedCategory = resolveSuggestedCategory(profiles)
@@ -333,7 +334,8 @@ object AdaptivePromptEngine {
         positiveFeelings: List<String>,
         heavyFeelings: List<String>,
         customNote: String,
-        contextPhrase: String
+        contextPhrase: String,
+        preserveTemplateQuestions: Boolean = false
     ): List<String> {
         val bank = questionsFor(template).map { injectContext(it, contextPhrase) }
         val hasStep1Input = selectedFeelings.isNotEmpty() || customNote.isNotEmpty()
@@ -377,7 +379,11 @@ object AdaptivePromptEngine {
             }
         }
 
-        val secondaryBank = if (tone == PromptTone.POSITIVE && template != CbtTemplateType.GENERAL_REFLECTION) {
+        val secondaryBank = if (
+            tone == PromptTone.POSITIVE &&
+            template != CbtTemplateType.GENERAL_REFLECTION &&
+            !preserveTemplateQuestions
+        ) {
             questionsFor(CbtTemplateType.GENERAL_REFLECTION).map { injectContext(it, contextPhrase) }
         } else {
             bank

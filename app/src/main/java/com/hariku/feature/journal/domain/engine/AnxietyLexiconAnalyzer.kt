@@ -18,7 +18,7 @@ object AnxietyLexiconAnalyzer {
         // Indonesia
         "cemas", "khawatir", "takut", "gelisah", "panik", "gugup", "resah", "was-was", "waswas",
         "tegang", "stres", "stress", "overthinking", "tertekan", "cemasnya", "bingung", "ngeri",
-        "deg-degan", "degdegan", "putus", "asa", "pesimis", "terancam", "insomnia", "sesak",
+        "deg-degan", "degdegan", "putus asa", "pesimis", "terancam", "insomnia", "sesak",
         // English
         "anxious", "anxiety", "worried", "worry", "afraid", "fear", "scared", "panic", "nervous",
         "stressed", "overwhelmed", "uneasy", "dread", "tense", "restless"
@@ -33,7 +33,26 @@ object AnxietyLexiconAnalyzer {
     fun analyze(text: String): Double {
         val tokens = tokenize(text)
         if (tokens.isEmpty()) return 0.0
-        val hits = tokens.count { it in lexicon }
+        val phraseEntries = lexicon.filter { ' ' in it }.map { tokenize(it) }
+        val singleWordEntries = lexicon.filterNot { ' ' in it }
+        var hits = 0
+        var index = 0
+        while (index < tokens.size) {
+            val matchedPhrase = phraseEntries
+                .filter { phrase -> phrase.isNotEmpty() && tokens.drop(index).take(phrase.size) == phrase }
+                .maxByOrNull { it.size }
+            when {
+                matchedPhrase != null -> {
+                    hits++
+                    index += matchedPhrase.size
+                }
+                tokens[index] in singleWordEntries -> {
+                    hits++
+                    index++
+                }
+                else -> index++
+            }
+        }
         return (hits.toDouble() / tokens.size).coerceIn(0.0, 1.0)
     }
 

@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -73,26 +74,30 @@ class PsychologicalContextProviderImpl(
                     runCatching {
                         chatbotRepository.getChatbotsWithHistory(userId)
                             .flatMapLatest { result ->
-                                val latestChatbotId = result.getOrNull()
-                                    ?.maxByOrNull { it.lastMessageTime }
-                                    ?.chatbot
-                                    ?.id
-                                if (latestChatbotId.isNullOrBlank()) {
+                                val chatbotIds = result.getOrNull()
+                                    .orEmpty()
+                                    .map { it.chatbot.id }
+                                    .filter { it.isNotBlank() }
+                                    .distinct()
+                                if (chatbotIds.isEmpty()) {
                                     flowOf(emptyList())
                                 } else {
-                                    chatbotRepository.getChatMessages(latestChatbotId, userId)
-                                        .map { messagesResult ->
-                                            messagesResult.getOrDefault(emptyList())
-                                                .filter { it.isFromUser }
-                                                .sortedBy { it.timestamp }
-                                                .map {
-                                                    AnxietyLexiconAnalyzer.TimedMessage(
-                                                        text = it.message,
-                                                        timestampMillis = it.timestamp
-                                                    )
-                                                }
-                                        }
-                                        .catch { emit(emptyList()) }
+                                    combine(chatbotIds.map { chatbotId ->
+                                        chatbotRepository.getChatMessages(chatbotId, userId)
+                                            .map { messagesResult ->
+                                                messagesResult.getOrDefault(emptyList())
+                                                    .filter { it.isFromUser }
+                                                    .map {
+                                                        AnxietyLexiconAnalyzer.TimedMessage(
+                                                            text = it.message,
+                                                            timestampMillis = it.timestamp
+                                                        )
+                                                    }
+                                            }
+                                            .catch { emit(emptyList()) }
+                                    }) { chats: Array<List<AnxietyLexiconAnalyzer.TimedMessage>> ->
+                                        chats.flatMap { it }.sortedBy { it.timestampMillis }
+                                    }
                                 }
                             }
                             .catch { emit(emptyList()) }

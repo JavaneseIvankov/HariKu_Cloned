@@ -25,8 +25,8 @@ interface JournalDao {
     suspend fun update(entry: JournalEntryEntity): Int
 
     @Query("DELETE FROM journal_entries WHERE id = :id AND userId = :userId")
-    suspend fun delete(id: Long, userId: String)
+    suspend fun delete(id: Long, userId: String): Int
 
     @Query("UPDATE journal_entries SET isPinned = NOT isPinned WHERE id = :id AND userId = :userId")
-    suspend fun togglePin(id: Long, userId: String)
+    suspend fun togglePin(id: Long, userId: String): Int
 }

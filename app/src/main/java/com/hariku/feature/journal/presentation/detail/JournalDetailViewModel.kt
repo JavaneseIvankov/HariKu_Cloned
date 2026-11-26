@@ -30,6 +30,7 @@ class JournalDetailViewModel(
             _uiState.update {
                 it.copy(
                     isLoading = false,
+                    entry = null,
                     errorMessage = "ID jurnal tidak valid."
                 )
             }
@@ -55,6 +56,7 @@ class JournalDetailViewModel(
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
+                            entry = null,
                             errorMessage = error.message ?: "Jurnal tidak ditemukan."
                         )
                     }

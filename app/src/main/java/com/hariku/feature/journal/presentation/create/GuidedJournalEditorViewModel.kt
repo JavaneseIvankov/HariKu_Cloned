@@ -65,7 +65,7 @@ class GuidedJournalEditorViewModel(
                 skipFlowMode = skipToEditor,
                 currentStep = if (skipToEditor) GuidedJournalStep.EDITOR else GuidedJournalStep.CHECK_IN,
                 selectedTemplate = effectiveTemplate,
-                isTemplateManuallyOverridden = parsedTemplate != null,
+                isTemplateManuallyOverridden = parsedTemplate != null || skipToEditor,
                 title = prefillTitle?.take(SaveJournalEntryUseCase.MAX_TITLE_LENGTH) ?: state.title
             )
             applyAdaptivePromptResolution(nextState)
@@ -182,6 +182,7 @@ class GuidedJournalEditorViewModel(
             state.copy(
                 selectedPrompt = "",
                 selectedTemplate = fallbackTemplate,
+                isTemplateManuallyOverridden = true,
                 currentStep = GuidedJournalStep.EDITOR
             )
         }

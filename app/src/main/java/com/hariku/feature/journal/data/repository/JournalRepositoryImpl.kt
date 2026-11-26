@@ -65,7 +65,10 @@ class JournalRepositoryImpl(
             } else {
                 journalDao.getById(entry.id, userId)
                     ?: return@withContext Result.failure(NoSuchElementException("Jurnal dengan id ${entry.id} tidak ditemukan"))
-                journalDao.update(JournalMapper.toEntity(entry, userId))
+                val rowsUpdated = journalDao.update(JournalMapper.toEntity(entry, userId))
+                if (rowsUpdated == 0) {
+                    return@withContext Result.failure(NoSuchElementException("Jurnal dengan id ${entry.id} tidak ditemukan"))
+                }
                 entry.id
             }
             Result.success(savedId)
@@ -76,7 +79,10 @@ class JournalRepositoryImpl(
 
     override suspend fun delete(id: Long): Result<Unit> = withContext(ioDispatcher) {
         try {
-            journalDao.delete(id, currentUserId())
+            val rowsDeleted = journalDao.delete(id, currentUserId())
+            if (rowsDeleted == 0) {
+                return@withContext Result.failure(NoSuchElementException("Jurnal dengan id $id tidak ditemukan"))
+            }
             Result.success(Unit)
         } catch (error: SQLiteException) {
             Result.failure(error)
@@ -85,7 +91,10 @@ class JournalRepositoryImpl(
 
     override suspend fun togglePin(id: Long): Result<Unit> = withContext(ioDispatcher) {
         try {
-            journalDao.togglePin(id, currentUserId())
+            val rowsUpdated = journalDao.togglePin(id, currentUserId())
+            if (rowsUpdated == 0) {
+                return@withContext Result.failure(NoSuchElementException("Jurnal dengan id $id tidak ditemukan"))
+            }
             Result.success(Unit)
         } catch (error: SQLiteException) {
             Result.failure(error)
