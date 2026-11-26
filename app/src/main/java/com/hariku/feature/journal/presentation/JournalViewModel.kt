@@ -2,6 +2,7 @@ package com.hariku.feature.journal.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hariku.core.auth.toScopedUserId
 import com.hariku.feature.journal.domain.engine.AdaptivePromptEngine
 import com.hariku.feature.journal.domain.model.JournalCategoryTag
 import com.hariku.feature.journal.domain.model.JournalEntry
@@ -12,13 +13,19 @@ import com.hariku.feature.journal.domain.usecase.TogglePinJournalUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -30,6 +37,7 @@ class JournalViewModel(
     getAdaptivePromptUseCase: GetAdaptivePromptUseCase,
     private val togglePinJournalUseCase: TogglePinJournalUseCase,
     private val deleteJournalEntryUseCase: DeleteJournalEntryUseCase,
+    userIdFlow: Flow<String?> = flowOf(null),
     private val coroutineScopeOverride: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -52,6 +60,15 @@ class JournalViewModel(
         get() = coroutineScopeOverride ?: viewModelScope
 
     private val localState = MutableStateFlow(JournalLocalState())
+
+    init {
+        userIdFlow
+            .map { it.toScopedUserId() }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach { localState.value = JournalLocalState() }
+            .launchIn(scope)
+    }
 
     private val _events = Channel<JournalEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
