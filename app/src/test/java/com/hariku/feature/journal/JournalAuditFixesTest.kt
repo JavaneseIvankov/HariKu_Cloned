@@ -7,6 +7,7 @@ import com.hariku.feature.chatbot.domain.repository.ChatbotRepository
 import com.hariku.feature.journal.data.provider.PsychologicalContextProviderImpl
 import com.hariku.feature.journal.domain.engine.AdaptivePromptEngine
 import com.hariku.feature.journal.domain.engine.AnxietyLexiconAnalyzer
+import com.hariku.feature.journal.domain.engine.VolatilityCalculator
 import com.hariku.feature.journal.domain.model.AdsLevel
 import com.hariku.feature.journal.domain.model.CbtTemplateType
 import com.hariku.feature.journal.domain.model.EviLevel
@@ -144,6 +145,52 @@ class JournalAuditFixesTest {
     }
 
     @Test
+    fun volatilityCalculator_ignoresMoodOutsideTrailingSevenDays() {
+        val now = 1_764_000_000_000L
+        val oldEntry = MoodEntry(mood = MoodType.SEDIH, timestamp = now - 8L * 24 * 60 * 60 * 1000)
+
+        assertEquals(null, VolatilityCalculator.calculateSma7(listOf(oldEntry), now))
+        assertEquals(0.0, VolatilityCalculator.calculateEvi(listOf(oldEntry), now), 0.001)
+    }
+
+    @Test
+    fun volatilityCalculator_singleMoodIsStableButOpposingRecentMoodsAreVolatile() {
+        val now = 1_764_000_000_000L
+        val day = 24L * 60 * 60 * 1000
+        val oneMood = listOf(MoodEntry(mood = MoodType.CEMAS, timestamp = now - 1_000L))
+        assertEquals(0.0, VolatilityCalculator.calculateEvi(oneMood, now), 0.001)
+        assertEquals(EviLevel.STABIL, VolatilityCalculator.classify(VolatilityCalculator.calculateEvi(oneMood, now)))
+
+        val contrast = listOf(
+            MoodEntry(mood = MoodType.SENANG, timestamp = now - day),
+            MoodEntry(mood = MoodType.CEMAS, timestamp = now - 1_000L)
+        )
+        val evi = VolatilityCalculator.calculateEvi(contrast, now)
+        assertEquals(2.0, evi, 0.001)
+        assertEquals(EviLevel.VOLATIL, VolatilityCalculator.classify(evi))
+    }
+
+    @Test
+    fun anxietyLexiconAnalyzer_doesNotCountStandalonePutusOrAsaAsAnxiety() {
+        assertEquals(0.0, AnxietyLexiconAnalyzer.analyze("putus hubungan"), 0.001)
+        assertEquals(0.0, AnxietyLexiconAnalyzer.analyze("asa hidup"), 0.001)
+        assertEquals(0.5, AnxietyLexiconAnalyzer.analyze("putus asa"), 0.001)
+        assertEquals(0.25, AnxietyLexiconAnalyzer.analyze("aku merasa putus asa"), 0.001)
+    }
+
+    @Test
+    fun guidedEditor_freeWriteKeepsGeneralTemplateAfterAdaptiveRecommendationEmits() {
+        val recommendation = AdaptivePromptEngine.recommendWithCheckIn(
+            metrics = PsychologicalMetrics.NEUTRAL,
+            latestTag = JournalCategoryTag.UMUM,
+            selectedFeelings = emptySet(),
+            templateOverride = CbtTemplateType.GENERAL_REFLECTION
+        )
+        assertEquals(CbtTemplateType.GENERAL_REFLECTION, recommendation.template)
+        assertTrue(recommendation.prompts.first().isNotBlank())
+    }
+
+    @Test
     fun anxietyLexiconAnalyzer_appliesTimeDecayForOldMessages() {
         val now = 1_764_000_000_000L
         val text = "cemas panik takut gelisah" // 4/4 = 1.0 raw ADS
@@ -177,6 +224,20 @@ class JournalAuditFixesTest {
         val rec = AdaptivePromptEngine.recommend(null, JournalCategoryTag.UMUM)
         assertEquals(AdaptivePromptEngine.CONTEXT_FALLBACK, rec.contextTag)
         assertFalse(rec.prompt.contains(" umum ", ignoreCase = true))
+    }
+
+    @Test
+    fun adaptivePromptEngine_positiveTonePreservesManuallyChosenTemplatePrompts() {
+        val recommendation = AdaptivePromptEngine.recommendWithCheckIn(
+            metrics = PsychologicalMetrics.NEUTRAL,
+            latestTag = JournalCategoryTag.UMUM,
+            selectedFeelings = setOf("Senang"),
+            templateOverride = CbtTemplateType.THOUGHT_RECORD
+        )
+
+        assertEquals(CbtTemplateType.THOUGHT_RECORD, recommendation.template)
+        assertTrue(recommendation.prompts.any { it.contains("Pikiran otomatis", ignoreCase = true) })
+        assertFalse(recommendation.prompts.any { it.contains("Satu hal yang disyukuri", ignoreCase = true) })
     }
 
     @Test

@@ -62,6 +62,25 @@ class JournalAccountIsolationTest {
     }
 
     @Test
+    fun journalRepository_mutationsFailWhenEntryMissingOrOwnedByAnotherAccount() = runBlocking {
+        val userIdFlow = MutableStateFlow<String?>("user_A")
+        val repository = JournalRepositoryImpl(FakeJournalDao(), userIdFlow)
+        val idA = repository.save(
+            JournalEntry(title = "A", content = "private", dateMillis = 1_000L)
+        ).getOrThrow()
+
+        userIdFlow.value = "user_B"
+        assertTrue(repository.save(JournalEntry(id = idA, title = "overwrite", content = "x", dateMillis = 2_000L)).isFailure)
+        assertTrue(repository.delete(idA).isFailure)
+        assertTrue(repository.togglePin(idA).isFailure)
+        assertTrue(repository.delete(idA + 100).isFailure)
+        assertTrue(repository.togglePin(idA + 100).isFailure)
+
+        userIdFlow.value = "user_A"
+        assertEquals("A", repository.getById(idA).getOrThrow().title)
+    }
+
+    @Test
     fun journalRepository_isolatesEntriesAndLatestTagAcrossAccountSwitches() = runBlocking {
         val userIdFlow = MutableStateFlow<String?>("user_A")
         val repository = JournalRepositoryImpl(FakeJournalDao(), userIdFlow)
@@ -133,18 +152,31 @@ class JournalAccountIsolationTest {
         }
 
         override suspend fun update(entry: JournalEntryEntity): Int {
-            items.value = items.value.map { if (it.id == entry.id) entry else it }
+            val existingIndex = items.value.indexOfFirst { it.id == entry.id && it.userId == entry.userId }
+            if (existingIndex < 0) return 0
+            items.value = items.value.map {
+                if (it.id == entry.id && it.userId == entry.userId) entry else it
+            }
             return 1
         }
 
-        override suspend fun delete(id: Long, userId: String) {
+        override suspend fun delete(id: Long, userId: String): Int {
+            val before = items.value.size
             items.value = items.value.filterNot { it.id == id && it.userId == userId }
+            return before - items.value.size
         }
 
-        override suspend fun togglePin(id: Long, userId: String) {
+        override suspend fun togglePin(id: Long, userId: String): Int {
+            var changed = 0
             items.value = items.value.map {
-                if (it.id == id && it.userId == userId) it.copy(isPinned = !it.isPinned) else it
+                if (it.id == id && it.userId == userId) {
+                    changed++
+                    it.copy(isPinned = !it.isPinned)
+                } else {
+                    it
+                }
             }
+            return changed
         }
     }
 }
