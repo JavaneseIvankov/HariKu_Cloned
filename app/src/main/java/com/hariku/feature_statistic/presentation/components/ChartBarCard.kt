@@ -8,7 +8,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,6 +52,7 @@ data class WeeklyData(
     val neutral: Float
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChartBarCard(
     weeklySentiments: List<WeeklySentiment> = emptyList()
@@ -82,7 +84,8 @@ fun ChartBarCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Sentimen Jurnal Mingguan",
+                    text = "Sentimen Mood Mingguan",
+                    modifier = Modifier.weight(1f),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
                     color = ColorTextDark
@@ -115,19 +118,14 @@ fun ChartBarCard(
                             modifier = Modifier.padding(16.dp)
                         )
                     } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(300.dp)
-                        ) {
-                            GroupedBarChart(data = chartData)
-                        }
+                        GroupedBarChart(data = chartData)
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(
+                        FlowRow(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             LegendItem(BarColorNegative, "Negatif")
                             LegendItem(BarColorPositive, "Positif")
