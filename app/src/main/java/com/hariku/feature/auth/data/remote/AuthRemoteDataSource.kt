@@ -8,6 +8,7 @@ import com.hariku.feature.auth.data.dto.UserDto
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -65,8 +66,14 @@ class AuthRemoteDataSource(
                 // Null once the user signs out.
                 trySend(firebaseAuth.currentUser)
             }
+            trySend(auth.currentUser)
             auth.addAuthStateListener(authStateListener)
             awaitClose { auth.removeAuthStateListener(authStateListener) }
+        }.distinctUntilChanged { old, new ->
+            old?.uid == new?.uid &&
+                old?.displayName == new?.displayName &&
+                old?.email == new?.email &&
+                old?.photoUrl == new?.photoUrl
         }
     }
 

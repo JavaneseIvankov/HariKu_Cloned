@@ -9,6 +9,7 @@ import com.hariku.feature.auth.domain.usecase.CheckLoginStatusUseCase
 import com.hariku.feature.auth.domain.usecase.GetCurrentUserUseCase
 import com.hariku.feature.auth.domain.usecase.LoginUseCase
 import com.hariku.feature.auth.domain.usecase.LogoutUseCase
+import com.hariku.feature.auth.domain.usecase.ObserveAuthStateUseCase
 import com.hariku.feature.auth.domain.usecase.SignUpUseCase
 import com.hariku.feature.auth.presentation.login.LoginScreenViewModel
 import com.hariku.feature.auth.presentation.register.RegisterScreenViewModel
@@ -41,6 +42,7 @@ val authModule = module {
     factory { SignUpUseCase(repository = get()) }
     factory { GetCurrentUserUseCase(repository = get()) }
     factory { CheckLoginStatusUseCase(repository = get()) }
+    factory { ObserveAuthStateUseCase(repository = get()) }
     factory { LogoutUseCase(repository = get()) }
 
     // Presentation

@@ -7,7 +7,9 @@ import com.hariku.feature.auth.domain.model.AuthUser
 import com.hariku.feature.auth.domain.repository.AuthRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
@@ -63,11 +65,19 @@ class AuthRepositoryImpl(
         return remoteDataSource.getAuthStateFlow()
             .flatMapLatest { firebaseUser ->
                 if (firebaseUser == null) {
-                    flowOf(null)
+                    flowOf<AuthUser?>(null)
                 } else {
-                    flowOf(fetchUserFromFirestoreOrFallback(firebaseUser))
+                    flow<AuthUser?> {
+                        val fallback = UserMapper.fromFirebaseUser(firebaseUser)
+                        emit(fallback)
+                        val remote = fetchUserFromFirestoreOrFallback(firebaseUser)
+                        if (remote != fallback) {
+                            emit(remote)
+                        }
+                    }
                 }
             }
+            .distinctUntilChanged()
     }
 
     override fun logout() {
