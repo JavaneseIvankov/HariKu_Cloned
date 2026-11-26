@@ -1,17 +1,29 @@
 package com.hariku.feature.chatbot.data.remote
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
 import com.hariku.feature.chatbot.data.dto.ChatMessageDto
 import com.hariku.feature.chatbot.data.dto.ChatbotDto
+import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class ChatbotFirebaseService(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val isAuthenticated: () -> Boolean = { true }
 ) {
+
+    private fun <T> ProducerScope<T>.handleListenerError(error: FirebaseFirestoreException, emptyFallback: T) {
+        if (error.code == FirebaseFirestoreException.Code.PERMISSION_DENIED && !isAuthenticated()) {
+            trySend(emptyFallback)
+            close()
+        } else {
+            close(error)
+        }
+    }
     
     companion object {
         private const val COLLECTION_CHATBOTS = "chatbots"
@@ -34,7 +46,7 @@ class ChatbotFirebaseService(
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    handleListenerError(error, emptyList())
                     return@addSnapshotListener
                 }
                 
@@ -72,7 +84,7 @@ class ChatbotFirebaseService(
             .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    handleListenerError(error, emptyList())
                     return@addSnapshotListener
                 }
                 
@@ -99,7 +111,7 @@ class ChatbotFirebaseService(
             .limit(1)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    handleListenerError(error, null)
                     return@addSnapshotListener
                 }
                 trySend(snapshot?.documents?.firstOrNull()?.toObject(ChatMessageDto::class.java))
@@ -114,7 +126,7 @@ class ChatbotFirebaseService(
             .whereEqualTo("isRead", false)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    handleListenerError(error, 0)
                     return@addSnapshotListener
                 }
                 trySend(snapshot?.size() ?: 0)

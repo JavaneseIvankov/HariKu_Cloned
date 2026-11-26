@@ -1,5 +1,6 @@
 package com.hariku.feature.chatbot.di
 
+import com.hariku.core.auth.CurrentUserSession
 import com.hariku.feature.chatbot.data.mapper.ChatMessageMapper
 import com.hariku.feature.chatbot.data.mapper.ChatbotMapper
 import com.hariku.feature.chatbot.data.remote.ChatbotFirebaseService
@@ -33,7 +34,8 @@ val chatbotModule = module {
     
     single {
         ChatbotFirebaseService(
-            firestore = get()
+            firestore = get(),
+            isAuthenticated = { get<CurrentUserSession>().currentUserIdOrNull() != null }
         )
     }
     
@@ -82,7 +84,7 @@ val chatbotModule = module {
     viewModel {
         CustomizeCatViewModel(
             addChatbotUseCase = get(),
-            firebaseAuth = get()
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
     
@@ -93,14 +95,14 @@ val chatbotModule = module {
     viewModel {
         CustomizePersonalCatViewModel(
             addChatbotUseCase = get(),
-            firebaseAuth = get()
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
     
     viewModel {
         ChatbotViewModel(
             getChatbotsWithHistoryUseCase = get(),
-            firebaseAuth = get()
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
     
@@ -110,7 +112,7 @@ val chatbotModule = module {
             getChatbotByIdUseCase = get(),
             sendMessageUseCase = get(),
             markMessagesAsReadUseCase = get(),
-            firebaseAuth = get()
+            userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }
 }
