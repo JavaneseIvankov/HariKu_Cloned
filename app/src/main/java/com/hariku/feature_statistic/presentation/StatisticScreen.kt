@@ -18,12 +18,12 @@ fun StatisticScreen(
     onOpenSos: () -> Unit,
     viewModel: StatisticViewModel = koinViewModel()
 ) {
-    val records by viewModel.records.collectAsStateWithLifecycle()
+    val entries by viewModel.entries.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize().background(Color(0xFFF9F9F9))) {
         SosTopBar(title = "Statistik", onSosClick = onOpenSos)
         Box(Modifier.weight(1f)) {
-            MoodReportScreen(records)
+            MoodReportScreen(entries)
         }
     }
 }

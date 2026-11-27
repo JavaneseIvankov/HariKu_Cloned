@@ -41,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hariku.R
+import com.hariku.feature.mood.domain.model.MoodType
 import com.hariku.feature_statistic.domain.model.CalendarDay
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -56,28 +57,12 @@ private val dayNameColor = Color(0xFF9E9E9E)
 
 @Composable
 fun CalendarView(
-    moodData: Map<Int, String> = emptyMap(),
+    moodData: Map<Int, MoodType> = emptyMap(),
     currentYear: Int = Calendar.getInstance().get(Calendar.YEAR),
     currentMonth: Int = Calendar.getInstance().get(Calendar.MONTH),
     onMonthChange: (year: Int, month: Int) -> Unit = { _, _ -> }
 ) {
     var expanded by remember { mutableStateOf(true) }
-
-    fun getMoodFromString(moodType: String): Mood {
-        return when (moodType) {
-            "Senang" -> Mood.SENANG
-            "Semangat" -> Mood.SEMANGAT
-            "Biasa" -> Mood.BIASA
-            "Sedih" -> Mood.SEDIH
-            "Marah" -> Mood.MARAH
-            "Takut" -> Mood.TAKUT
-            "Cemas" -> Mood.CEMAS
-            "Kecewa" -> Mood.KECEWA
-            "Lelah" -> Mood.LELAH
-            "Hampa" -> Mood.HAMPA
-            else -> Mood.NONE
-        }
-    }
 
     val period = YearMonth.of(currentYear, currentMonth + 1)
     val daysInMonth = period.lengthOfMonth()
@@ -86,15 +71,14 @@ fun CalendarView(
 
     val calendarCells = remember(daysInMonth, firstDayOfWeek, moodData) {
         val cells = mutableListOf<CalendarDay>()
-        repeat(firstDayOfWeek) { cells.add(CalendarDay(day = 0, mood = Mood.NONE, isEmpty = true)) }
+        repeat(firstDayOfWeek) { cells.add(CalendarDay(day = 0, mood = null, isEmpty = true)) }
         for (day in 1..daysInMonth) {
-            val mood = moodData[day]?.let { getMoodFromString(it) } ?: Mood.NONE
-            cells.add(CalendarDay(day = day, mood = mood))
+            cells.add(CalendarDay(day = day, mood = moodData[day]))
         }
         val totalCells = cells.size
         val remainder = totalCells % 7
         if (remainder != 0) {
-            repeat(7 - remainder) { cells.add(CalendarDay(day = 0, mood = Mood.NONE, isEmpty = true)) }
+            repeat(7 - remainder) { cells.add(CalendarDay(day = 0, mood = null, isEmpty = true)) }
         }
         cells
     }

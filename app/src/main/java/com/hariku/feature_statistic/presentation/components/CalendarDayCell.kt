@@ -22,17 +22,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hariku.R
+import com.hariku.feature.mood.domain.model.MoodType
+import com.hariku.feature.mood.presentation.MoodVisualCatalog
+
+private val emptyMoodBorderColor = Color(0xFF9F9F9F)
 
 @Composable
-fun CalendarDayCell(day: Int, mood: Mood) {
-    val bgColor = if (mood != Mood.NONE) mood.color else Color.Transparent
+fun CalendarDayCell(day: Int, mood: MoodType?) {
+    val visual = mood?.let { MoodVisualCatalog.of(it) }
+    val bgColor = visual?.accentColor ?: Color.Transparent
+    val borderColor = visual?.accentColor ?: emptyMoodBorderColor
+    val iconRes = visual?.iconRes ?: R.drawable.ic_cross
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(4.dp))
             .background(bgColor)
-            .border(1.dp, mood.color, RoundedCornerShape(4.dp)),
+            .border(1.dp, borderColor, RoundedCornerShape(4.dp)),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -43,7 +51,7 @@ fun CalendarDayCell(day: Int, mood: Mood) {
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(mood.iconRes),
+                painter = painterResource(iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(256.dp)
             )
@@ -53,7 +61,7 @@ fun CalendarDayCell(day: Int, mood: Mood) {
             modifier = Modifier
                 .fillMaxWidth()
                 .size(height = 1.dp, width = 0.dp)
-                .background(mood.color)
+                .background(borderColor)
         )
 
         Text(
@@ -73,6 +81,6 @@ fun CalendarDayCell(day: Int, mood: Mood) {
 private fun CalendarDayCellPreview() {
     CalendarDayCell(
         day = 1,
-        mood = Mood.SENANG
+        mood = MoodType.SENANG
     )
 }
