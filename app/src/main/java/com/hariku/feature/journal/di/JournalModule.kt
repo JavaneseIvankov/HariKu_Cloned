@@ -1,8 +1,10 @@
 package com.hariku.feature.journal.di
 
+import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.auth.CurrentUserSession
-import com.hariku.feature.journal.data.local.JournalDatabase
 import com.hariku.feature.journal.data.provider.PsychologicalContextProviderImpl
+import com.hariku.feature.journal.data.remote.JournalFirebaseService
+import com.hariku.feature.journal.data.remote.JournalRemoteDataSource
 import com.hariku.feature.journal.data.repository.JournalRepositoryImpl
 import com.hariku.feature.journal.domain.provider.PsychologicalContextProvider
 import com.hariku.feature.journal.domain.repository.JournalRepository
@@ -15,16 +17,19 @@ import com.hariku.feature.journal.domain.usecase.TogglePinJournalUseCase
 import com.hariku.feature.journal.presentation.JournalViewModel
 import com.hariku.feature.journal.presentation.create.GuidedJournalEditorViewModel
 import com.hariku.feature.journal.presentation.detail.JournalDetailViewModel
-import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val journalModule = module {
-    single { JournalDatabase.open(androidContext()) }
-    single { get<JournalDatabase>().journalDao() }
+    single<JournalRemoteDataSource> {
+        JournalFirebaseService(
+            firestore = get(),
+            isAuthenticated = { runCatching { get<FirebaseAuth>().currentUser != null }.getOrDefault(false) }
+        )
+    }
     single<JournalRepository> {
         JournalRepositoryImpl(
-            journalDao = get(),
+            remoteDataSource = get(),
             userIdFlow = get<CurrentUserSession>().userIdFlow
         )
     }

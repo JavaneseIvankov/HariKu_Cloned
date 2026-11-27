@@ -1,12 +1,11 @@
 package com.hariku.feature.journal.data.repository
 
-import android.database.sqlite.SQLiteException
-import com.hariku.core.auth.toScopedUserId
-import com.hariku.feature.journal.data.local.JournalDao
-import com.hariku.feature.journal.data.mapper.JournalMapper
+import com.hariku.feature.journal.data.dto.toDto
+import com.hariku.feature.journal.data.remote.JournalRemoteDataSource
 import com.hariku.feature.journal.domain.model.JournalCategoryTag
 import com.hariku.feature.journal.domain.model.JournalEntry
 import com.hariku.feature.journal.domain.repository.JournalRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,82 +20,99 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class JournalRepositoryImpl(
-    private val journalDao: JournalDao,
+    private val remoteDataSource: JournalRemoteDataSource,
     private val userIdFlow: Flow<String?> = flowOf(null),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : JournalRepository {
 
-    private fun scopedUserIds(): Flow<String> =
-        userIdFlow.map { it.toScopedUserId() }.distinctUntilChanged()
+    private fun scopedUserIds(): Flow<String?> =
+        userIdFlow
+            .map { it?.trim()?.takeIf(String::isNotEmpty) }
+            .distinctUntilChanged()
 
-    private suspend fun currentUserId(): String = userIdFlow.first().toScopedUserId()
+    private suspend fun currentUserIdOrNull(): String? =
+        userIdFlow.first()?.trim()?.takeIf(String::isNotEmpty)
 
     override fun observeEntries(): Flow<List<JournalEntry>> =
         scopedUserIds()
             .flatMapLatest { userId ->
-                journalDao.observeAll(userId)
-                    .map { entities -> entities.map(JournalMapper::toDomain) }
+                if (userId == null) {
+                    flowOf(emptyList())
+                } else {
+                    remoteDataSource.observeAll(userId)
+                        .map { entries -> entries.map { it.toDomain() } }
+                }
             }
             .flowOn(ioDispatcher)
 
     override fun observeLatestTag(): Flow<JournalCategoryTag?> =
         scopedUserIds()
             .flatMapLatest { userId ->
-                journalDao.getLatestTag(userId)
-                    .map { tagName -> tagName?.let(JournalCategoryTag::fromNameOrDefault) }
+                if (userId == null) {
+                    flowOf(null)
+                } else {
+                    remoteDataSource.observeLatestTag(userId)
+                        .map { tagName -> tagName?.let(JournalCategoryTag::fromNameOrDefault) }
+                }
             }
             .flowOn(ioDispatcher)
 
     override suspend fun getById(id: Long): Result<JournalEntry> = withContext(ioDispatcher) {
         try {
-            val entity = journalDao.getById(id, currentUserId())
+            val userId = currentUserIdOrNull()
+                ?: return@withContext Result.failure(IllegalStateException("Pengguna belum login"))
+            val dto = remoteDataSource.getById(id, userId)
                 ?: return@withContext Result.failure(NoSuchElementException("Jurnal dengan id $id tidak ditemukan"))
-            Result.success(JournalMapper.toDomain(entity))
-        } catch (error: SQLiteException) {
+            Result.success(dto.toDomain())
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
             Result.failure(error)
         }
     }
 
     override suspend fun save(entry: JournalEntry): Result<Long> = withContext(ioDispatcher) {
         try {
-            val userId = currentUserId()
-            val savedId = if (entry.id == 0L) {
-                journalDao.insert(JournalMapper.toEntity(entry, userId))
-            } else {
-                journalDao.getById(entry.id, userId)
-                    ?: return@withContext Result.failure(NoSuchElementException("Jurnal dengan id ${entry.id} tidak ditemukan"))
-                val rowsUpdated = journalDao.update(JournalMapper.toEntity(entry, userId))
-                if (rowsUpdated == 0) {
-                    return@withContext Result.failure(NoSuchElementException("Jurnal dengan id ${entry.id} tidak ditemukan"))
-                }
-                entry.id
-            }
+            val userId = currentUserIdOrNull()
+                ?: return@withContext Result.failure(IllegalStateException("Pengguna belum login"))
+            val savedId = remoteDataSource.save(entry.toDto(userId), userId)
+                ?: return@withContext Result.failure(NoSuchElementException("Jurnal dengan id ${entry.id} tidak ditemukan"))
             Result.success(savedId)
-        } catch (error: SQLiteException) {
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
             Result.failure(error)
         }
     }
 
     override suspend fun delete(id: Long): Result<Unit> = withContext(ioDispatcher) {
         try {
-            val rowsDeleted = journalDao.delete(id, currentUserId())
-            if (rowsDeleted == 0) {
+            val userId = currentUserIdOrNull()
+                ?: return@withContext Result.failure(IllegalStateException("Pengguna belum login"))
+            val deleted = remoteDataSource.delete(id, userId)
+            if (!deleted) {
                 return@withContext Result.failure(NoSuchElementException("Jurnal dengan id $id tidak ditemukan"))
             }
             Result.success(Unit)
-        } catch (error: SQLiteException) {
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
             Result.failure(error)
         }
     }
 
     override suspend fun togglePin(id: Long): Result<Unit> = withContext(ioDispatcher) {
         try {
-            val rowsUpdated = journalDao.togglePin(id, currentUserId())
-            if (rowsUpdated == 0) {
+            val userId = currentUserIdOrNull()
+                ?: return@withContext Result.failure(IllegalStateException("Pengguna belum login"))
+            val updated = remoteDataSource.togglePin(id, userId)
+            if (!updated) {
                 return@withContext Result.failure(NoSuchElementException("Jurnal dengan id $id tidak ditemukan"))
             }
             Result.success(Unit)
-        } catch (error: SQLiteException) {
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
             Result.failure(error)
         }
     }

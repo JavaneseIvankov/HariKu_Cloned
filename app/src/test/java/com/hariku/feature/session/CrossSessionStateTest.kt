@@ -18,9 +18,9 @@ import com.hariku.feature.chatbot.domain.usecase.SendMessageUseCase
 import com.hariku.feature.chatbot.presentation.ChatbotViewModel
 import com.hariku.feature.chatbot.presentation.detail.ChatbotDetailViewModel
 import com.hariku.feature.home.presentation.HomeViewModel
-import com.hariku.feature.journal.data.local.JournalDao
-import com.hariku.feature.journal.data.local.JournalEntryEntity
+import com.hariku.feature.journal.data.dto.JournalEntryDto
 import com.hariku.feature.journal.data.provider.PsychologicalContextProviderImpl
+import com.hariku.feature.journal.data.remote.JournalRemoteDataSource
 import com.hariku.feature.journal.data.repository.JournalRepositoryImpl
 import com.hariku.feature.journal.domain.model.JournalCategoryTag
 import com.hariku.feature.journal.domain.model.JournalEntry
@@ -232,7 +232,7 @@ class CrossSessionStateTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         try {
             val userIdFlow = MutableStateFlow<String?>("user_A")
-            val journalRepo = JournalRepositoryImpl(FakeJournalDao(), userIdFlow, Dispatchers.Unconfined)
+            val journalRepo = JournalRepositoryImpl(FakeJournalRemoteDataSource(), userIdFlow, Dispatchers.Unconfined)
             val moodRepo = MoodRepositoryImpl(FakeMoodDao(), userIdFlow)
             val chatbotRepo = FakeMultiAccountChatbotRepository()
 
@@ -405,53 +405,49 @@ class CrossSessionStateTest {
         }
     }
 
-    private class FakeJournalDao : JournalDao {
+    private class FakeJournalRemoteDataSource : JournalRemoteDataSource {
         private var nextId = 1L
-        private val items = MutableStateFlow<List<JournalEntryEntity>>(emptyList())
+        private val items = MutableStateFlow<List<JournalEntryDto>>(emptyList())
 
-        override fun observeAll(userId: String): Flow<List<JournalEntryEntity>> =
+        override fun observeAll(userId: String): Flow<List<JournalEntryDto>> =
             items.map { list -> list.filter { it.userId == userId } }
 
-        override suspend fun getById(id: Long, userId: String): JournalEntryEntity? =
+        override suspend fun getById(id: Long, userId: String): JournalEntryDto? =
             items.value.firstOrNull { it.id == id && it.userId == userId }
 
-        override fun getLatestTag(userId: String): Flow<String?> =
+        override fun observeLatestTag(userId: String): Flow<String?> =
             items.map { list ->
                 list.filter { it.userId == userId }
-                    .maxWithOrNull(compareBy<JournalEntryEntity> { it.updatedAt }.thenBy { it.id })
+                    .maxWithOrNull(compareBy<JournalEntryDto> { it.updatedAt }.thenBy { it.id })
                     ?.tag
             }
 
-        override suspend fun insert(entry: JournalEntryEntity): Long {
-            val id = nextId++
-            items.value = items.value + entry.copy(id = id)
-            return id
-        }
-
-        override suspend fun update(entry: JournalEntryEntity): Int {
-            var updated = 0
-            items.value = items.value.map {
-                if (it.id == entry.id && it.userId == entry.userId) {
-                    updated++
-                    entry
-                } else {
-                    it
+        override suspend fun save(entry: JournalEntryDto, userId: String): Long? {
+            return if (entry.id == 0L) {
+                val id = nextId++
+                items.value = items.value + entry.copy(id = id, userId = userId)
+                id
+            } else {
+                val existingIndex = items.value.indexOfFirst { it.id == entry.id && it.userId == userId }
+                if (existingIndex < 0) return null
+                items.value = items.value.map {
+                    if (it.id == entry.id && it.userId == userId) entry.copy(userId = userId) else it
                 }
+                entry.id
             }
-            return updated
         }
 
-        override suspend fun delete(id: Long, userId: String): Int {
+        override suspend fun delete(id: Long, userId: String): Boolean {
             val before = items.value.size
             items.value = items.value.filterNot { it.id == id && it.userId == userId }
-            return before - items.value.size
+            return before > items.value.size
         }
 
-        override suspend fun togglePin(id: Long, userId: String): Int {
-            var updated = 0
+        override suspend fun togglePin(id: Long, userId: String): Boolean {
+            var updated = false
             items.value = items.value.map {
                 if (it.id == id && it.userId == userId) {
-                    updated++
+                    updated = true
                     it.copy(isPinned = !it.isPinned)
                 } else {
                     it
