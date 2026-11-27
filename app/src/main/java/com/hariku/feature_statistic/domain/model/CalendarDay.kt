@@ -1,9 +1,9 @@
 package com.hariku.feature_statistic.domain.model
 
-import com.hariku.feature_statistic.presentation.components.Mood
+import com.hariku.feature.mood.domain.model.MoodType
 
 data class CalendarDay(
     val day: Int,
-    val mood: Mood,
+    val mood: MoodType? = null,
     val isEmpty: Boolean = false
 )

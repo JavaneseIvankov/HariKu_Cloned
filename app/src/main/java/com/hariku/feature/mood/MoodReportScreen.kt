@@ -16,6 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.hariku.feature.mood.domain.model.MoodEntry
+import com.hariku.feature.mood.domain.model.MoodSentiment
 import com.hariku.feature_statistic.domain.model.MoodStatItem
 import com.hariku.feature_statistic.domain.model.SentimentData
 import com.hariku.feature_statistic.domain.model.WeeklySentiment
@@ -33,7 +35,7 @@ import java.util.Locale
 private val indonesian = Locale.forLanguageTag("id-ID")
 
 @Composable
-fun MoodReportScreen(entries: List<MoodRecord>?) {
+fun MoodReportScreen(entries: List<MoodEntry>?) {
     if (entries == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -80,7 +82,7 @@ fun MoodReportScreen(entries: List<MoodRecord>?) {
         }
         item {
             CalendarView(
-                moodData = report.dailyMoods.mapValues { it.value.label },
+                moodData = report.dailyMoods,
                 currentYear = month.year,
                 currentMonth = month.monthValue - 1,
                 onMonthChange = { year, zeroBasedMonth ->
@@ -90,27 +92,27 @@ fun MoodReportScreen(entries: List<MoodRecord>?) {
         }
         item {
             ChartPieCard(SentimentData(
-                negative = monthly.percent(Sentiment.NEGATIVE),
-                positive = monthly.percent(Sentiment.POSITIVE),
-                neutral = monthly.percent(Sentiment.NEUTRAL)
+                negative = monthly.percent(MoodSentiment.NEGATIVE),
+                positive = monthly.percent(MoodSentiment.POSITIVE),
+                neutral = monthly.percent(MoodSentiment.NEUTRAL)
             ))
         }
         item {
             StatisticsMood(monthly.counts.entries.sortedByDescending { it.value }.map { (mood, count) ->
-                MoodStatItem(mood.label, count, monthly.fraction(count) * 100f)
+                MoodStatItem(mood, count, monthly.fraction(count) * 100f)
             })
         }
         item {
             ChartBarCard(report.weekly.filter { it.breakdown.total > 0 }.map { week ->
                 WeeklySentiment(
                     weekLabel = month.atDay(week.days.first).format(dateFormat),
-                    negative = week.breakdown.percent(Sentiment.NEGATIVE),
-                    positive = week.breakdown.percent(Sentiment.POSITIVE),
-                    neutral = week.breakdown.percent(Sentiment.NEUTRAL)
+                    negative = week.breakdown.percent(MoodSentiment.NEGATIVE),
+                    positive = week.breakdown.percent(MoodSentiment.POSITIVE),
+                    neutral = week.breakdown.percent(MoodSentiment.NEUTRAL)
                 )
             })
         }
     }
 }
 
-private fun MoodBreakdown.percent(sentiment: Sentiment): Float = fraction(count(sentiment)) * 100f
+private fun MoodBreakdown.percent(sentiment: MoodSentiment): Float = fraction(count(sentiment)) * 100f

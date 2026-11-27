@@ -1,5 +1,7 @@
 package com.hariku.feature_statistic.domain.model
 
+import com.hariku.feature.mood.domain.model.MoodType
+
 data class SentimentData(
     val negative: Float,
     val positive: Float,
@@ -7,7 +9,7 @@ data class SentimentData(
 )
 
 data class MoodStatItem(
-    val moodType: String,
+    val moodType: MoodType,
     val count: Int,
     val percentage: Float
 )

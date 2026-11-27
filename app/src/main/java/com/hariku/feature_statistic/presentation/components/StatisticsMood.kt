@@ -41,6 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hariku.feature.mood.domain.model.MoodType
+import com.hariku.feature.mood.presentation.MoodVisualCatalog
 import com.hariku.feature_statistic.domain.model.MoodStatItem
 
 @Composable
@@ -51,22 +53,6 @@ fun StatisticsMood(
     val rotationState by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f, label = "arrow_rotation"
     )
-
-    fun getMoodFromString(moodType: String): Mood {
-        return when (moodType) {
-            "Senang" -> Mood.SENANG
-            "Semangat" -> Mood.SEMANGAT
-            "Biasa" -> Mood.BIASA
-            "Sedih" -> Mood.SEDIH
-            "Marah" -> Mood.MARAH
-            "Takut" -> Mood.TAKUT
-            "Cemas" -> Mood.CEMAS
-            "Kecewa" -> Mood.KECEWA
-            "Lelah" -> Mood.LELAH
-            "Hampa" -> Mood.HAMPA
-            else -> Mood.NONE
-        }
-    }
 
     val topMoods = moodStatistics.take(4)
 
@@ -126,10 +112,8 @@ fun StatisticsMood(
                         )
                     } else {
                         topMoods.forEach { moodStat ->
-                            val mood = getMoodFromString(moodStat.moodType)
                             StatisticRowItem(
-                                mood = mood,
-                                label = moodStat.moodType,
+                                mood = moodStat.moodType,
                                 count = moodStat.count,
                                 percentage = "${moodStat.percentage.toInt()}%"
                             )
@@ -143,16 +127,16 @@ fun StatisticsMood(
 
 @Composable
 fun StatisticRowItem(
-    mood: Mood,
-    label: String,
+    mood: MoodType,
     count: Int = 0,
     percentage: String
 ) {
+    val visual = MoodVisualCatalog.of(mood)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(mood.color),
+            .background(visual.accentColor),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -162,8 +146,8 @@ fun StatisticRowItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
-                painter = painterResource(mood.iconRes),
-                contentDescription = label,
+                painter = painterResource(visual.iconRes),
+                contentDescription = mood.label,
                 modifier = Modifier.fillMaxHeight()
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -172,7 +156,7 @@ fun StatisticRowItem(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = label,
+                    text = mood.label,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium
                 )

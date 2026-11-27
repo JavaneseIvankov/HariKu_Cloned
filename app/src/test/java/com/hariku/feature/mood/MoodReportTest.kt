@@ -1,5 +1,8 @@
 package com.hariku.feature.mood
 
+import com.hariku.feature.mood.domain.model.MoodEntry
+import com.hariku.feature.mood.domain.model.MoodSentiment
+import com.hariku.feature.mood.domain.model.MoodType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -25,11 +28,11 @@ class MoodReportTest {
             jakarta
         )
 
-        assertEquals(mapOf(1 to Mood.HAPPY, 8 to Mood.NEUTRAL, 29 to Mood.EXCITED), report.dailyMoods)
+        assertEquals(mapOf(1 to MoodType.SENANG, 8 to MoodType.BIASA, 29 to MoodType.SEMANGAT), report.dailyMoods)
         assertEquals(3, report.monthly.total)
-        assertEquals(2, report.monthly.count(Sentiment.POSITIVE))
-        assertEquals(1, report.monthly.count(Sentiment.NEUTRAL))
-        assertEquals(0, report.monthly.count(Sentiment.NEGATIVE))
+        assertEquals(2, report.monthly.count(MoodSentiment.POSITIVE))
+        assertEquals(1, report.monthly.count(MoodSentiment.NEUTRAL))
+        assertEquals(0, report.monthly.count(MoodSentiment.NEGATIVE))
         assertEquals(listOf(1, 1, 0, 0, 1), report.weekly.map { it.breakdown.total })
         assertEquals(29..29, report.weekly.last().days)
     }
@@ -50,7 +53,7 @@ class MoodReportTest {
             jakarta
         )
 
-        assertEquals(mapOf(1 to Mood.HAPPY, 2 to Mood.TIRED, 3 to Mood.NEUTRAL), report.dailyMoods)
+        assertEquals(mapOf(1 to MoodType.SENANG, 2 to MoodType.LELAH, 3 to MoodType.BIASA), report.dailyMoods)
     }
 
     @Test
@@ -82,9 +85,9 @@ class MoodReportTest {
     }
 
     private fun entry(label: String, time: String, id: Long = 0) =
-        MoodRecord(
-            mood = Mood.entries.first { it.label == label },
-            timestamp = Instant.parse(time).toEpochMilli(),
-            id = id
+        MoodEntry(
+            id = id,
+            mood = requireNotNull(MoodType.fromLabel(label)),
+            timestamp = Instant.parse(time).toEpochMilli()
         )
 }
