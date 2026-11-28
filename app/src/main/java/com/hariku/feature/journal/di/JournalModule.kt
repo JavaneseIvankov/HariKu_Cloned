@@ -1,8 +1,13 @@
 package com.hariku.feature.journal.di
 
 import com.hariku.core.auth.CurrentUserSession
-import com.hariku.feature.journal.data.local.JournalDatabase
+import com.hariku.feature.journal.data.local.JournalLocalMigrator
+import com.hariku.feature.journal.data.local.LocalJournalStore
+import com.hariku.feature.journal.data.local.RoomJournalLocalMigrator
+import com.hariku.feature.journal.data.local.SqliteLocalJournalStore
 import com.hariku.feature.journal.data.provider.PsychologicalContextProviderImpl
+import com.hariku.feature.journal.data.remote.JournalFirebaseService
+import com.hariku.feature.journal.data.remote.JournalRemoteDataSource
 import com.hariku.feature.journal.data.repository.JournalRepositoryImpl
 import com.hariku.feature.journal.domain.provider.PsychologicalContextProvider
 import com.hariku.feature.journal.domain.repository.JournalRepository
@@ -20,12 +25,24 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val journalModule = module {
-    single { JournalDatabase.open(androidContext()) }
-    single { get<JournalDatabase>().journalDao() }
+    single<JournalRemoteDataSource> {
+        JournalFirebaseService(
+            firestore = get(),
+            isAuthenticated = { get<CurrentUserSession>().currentUserIdOrNull() != null }
+        )
+    }
+    single<LocalJournalStore> { SqliteLocalJournalStore(context = androidContext()) }
+    single<JournalLocalMigrator> {
+        RoomJournalLocalMigrator(
+            localStore = get(),
+            remoteDataSource = get()
+        )
+    }
     single<JournalRepository> {
         JournalRepositoryImpl(
-            journalDao = get(),
-            userIdFlow = get<CurrentUserSession>().userIdFlow
+            remoteDataSource = get(),
+            userIdFlow = get<CurrentUserSession>().userIdFlow,
+            localMigrator = get()
         )
     }
     single<PsychologicalContextProvider> {

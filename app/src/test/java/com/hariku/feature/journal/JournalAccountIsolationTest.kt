@@ -1,8 +1,8 @@
 package com.hariku.feature.journal
 
 import com.hariku.core.auth.LOCAL_GUEST_USER_ID
-import com.hariku.feature.journal.data.local.JournalDao
-import com.hariku.feature.journal.data.local.JournalEntryEntity
+import com.hariku.feature.journal.data.dto.JournalEntryDto
+import com.hariku.feature.journal.data.remote.JournalRemoteDataSource
 import com.hariku.feature.journal.data.repository.JournalRepositoryImpl
 import com.hariku.feature.journal.domain.model.JournalCategoryTag
 import com.hariku.feature.journal.domain.model.JournalEntry
@@ -64,7 +64,7 @@ class JournalAccountIsolationTest {
     @Test
     fun journalRepository_mutationsFailWhenEntryMissingOrOwnedByAnotherAccount() = runBlocking {
         val userIdFlow = MutableStateFlow<String?>("user_A")
-        val repository = JournalRepositoryImpl(FakeJournalDao(), userIdFlow)
+        val repository = JournalRepositoryImpl(FakeJournalRemoteDataSource(), userIdFlow)
         val idA = repository.save(
             JournalEntry(title = "A", content = "private", dateMillis = 1_000L)
         ).getOrThrow()
@@ -81,9 +81,22 @@ class JournalAccountIsolationTest {
     }
 
     @Test
+    fun journalRepository_requiresAuthenticatedUserWithoutGuestFallback() = runBlocking {
+        val userIdFlow = MutableStateFlow<String?>(null)
+        val repository = JournalRepositoryImpl(FakeJournalRemoteDataSource(), userIdFlow)
+
+        assertTrue(repository.observeEntries().first().isEmpty())
+        assertNull(repository.observeLatestTag().first())
+        assertTrue(repository.getById(1L).isFailure)
+        assertTrue(repository.save(JournalEntry(title = "Guest", content = "x", dateMillis = 1_000L)).isFailure)
+        assertTrue(repository.delete(1L).isFailure)
+        assertTrue(repository.togglePin(1L).isFailure)
+    }
+
+    @Test
     fun journalRepository_isolatesEntriesAndLatestTagAcrossAccountSwitches() = runBlocking {
         val userIdFlow = MutableStateFlow<String?>("user_A")
-        val repository = JournalRepositoryImpl(FakeJournalDao(), userIdFlow)
+        val repository = JournalRepositoryImpl(FakeJournalRemoteDataSource(), userIdFlow)
 
         val idA = repository.save(
             JournalEntry(title = "A", content = "isi A", dateMillis = 1_000L, tag = JournalCategoryTag.AKADEMIK)
@@ -128,49 +141,55 @@ class JournalAccountIsolationTest {
         }
     }
 
-    private class FakeJournalDao : JournalDao {
+    private class FakeJournalRemoteDataSource : JournalRemoteDataSource {
         private var nextId = 1L
-        private val items = MutableStateFlow<List<JournalEntryEntity>>(emptyList())
+        private val items = MutableStateFlow<List<JournalEntryDto>>(emptyList())
 
-        override fun observeAll(userId: String): Flow<List<JournalEntryEntity>> =
+        override fun observeAll(userId: String): Flow<List<JournalEntryDto>> =
             items.map { list -> list.filter { it.userId == userId } }
 
-        override suspend fun getById(id: Long, userId: String): JournalEntryEntity? =
+        override suspend fun getById(id: Long, userId: String): JournalEntryDto? =
             items.value.firstOrNull { it.id == id && it.userId == userId }
 
-        override fun getLatestTag(userId: String): Flow<String?> =
+        override fun observeLatestTag(userId: String): Flow<String?> =
             items.map { list ->
                 list.filter { it.userId == userId }
-                    .maxWithOrNull(compareBy<JournalEntryEntity> { it.updatedAt }.thenBy { it.id })
+                    .maxWithOrNull(compareBy<JournalEntryDto> { it.updatedAt }.thenBy { it.id })
                     ?.tag
             }
 
-        override suspend fun insert(entry: JournalEntryEntity): Long {
-            val id = nextId++
-            items.value = items.value + entry.copy(id = id)
-            return id
-        }
-
-        override suspend fun update(entry: JournalEntryEntity): Int {
-            val existingIndex = items.value.indexOfFirst { it.id == entry.id && it.userId == entry.userId }
-            if (existingIndex < 0) return 0
-            items.value = items.value.map {
-                if (it.id == entry.id && it.userId == entry.userId) entry else it
+        override suspend fun save(entry: JournalEntryDto, userId: String): Long? {
+            return if (entry.id == 0L) {
+                val id = nextId++
+                items.value = items.value + entry.copy(id = id, userId = userId)
+                id
+            } else {
+                val existingIndex = items.value.indexOfFirst { it.id == entry.id && it.userId == userId }
+                if (existingIndex < 0) return null
+                items.value = items.value.map {
+                    if (it.id == entry.id && it.userId == userId) entry.copy(userId = userId) else it
+                }
+                entry.id
             }
-            return 1
         }
 
-        override suspend fun delete(id: Long, userId: String): Int {
+        override suspend fun upsertBatch(entries: List<JournalEntryDto>, userId: String) {
+            val byId = entries.associate { it.id to it.copy(userId = userId) }
+            val remaining = items.value.filterNot { it.userId == userId && it.id in byId }
+            items.value = remaining + byId.values
+        }
+
+        override suspend fun delete(id: Long, userId: String): Boolean {
             val before = items.value.size
             items.value = items.value.filterNot { it.id == id && it.userId == userId }
-            return before - items.value.size
+            return before > items.value.size
         }
 
-        override suspend fun togglePin(id: Long, userId: String): Int {
-            var changed = 0
+        override suspend fun togglePin(id: Long, userId: String): Boolean {
+            var changed = false
             items.value = items.value.map {
                 if (it.id == id && it.userId == userId) {
-                    changed++
+                    changed = true
                     it.copy(isPinned = !it.isPinned)
                 } else {
                     it
