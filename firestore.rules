@@ -30,7 +30,30 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /users/{userId}/{document=**} {
+    match /users/{userId}/moods/{moodId} {
+      allow read: if owns(userId);
+      allow create: if owns(userId)
+        && request.resource.data.userId == userId
+        && request.resource.data.id is int
+        && request.resource.data.id > 0
+        && request.resource.data.moodType is string
+        && request.resource.data.moodType.size() > 0
+        && request.resource.data.timestamp is int
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 500
+        && request.resource.data.updatedAt is int;
+      allow update: if owns(userId)
+        && request.resource.data.userId == userId
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.moodType is string
+        && request.resource.data.moodType.size() > 0
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 500
+        && request.resource.data.updatedAt is int;
+      allow delete: if owns(userId);
+    }
+
+    match /users/{userId}/journals/{journalId} {
       allow read, write: if owns(userId);
     }
 

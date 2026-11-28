@@ -1,7 +1,7 @@
 package com.hariku.feature.mood
 
-import com.hariku.feature.mood.data.local.MoodDao
-import com.hariku.feature.mood.data.local.MoodEntryEntity
+import com.hariku.feature.mood.data.dto.MoodEntryDto
+import com.hariku.feature.mood.data.remote.MoodRemoteDataSource
 import com.hariku.feature.mood.data.repository.MoodRepositoryImpl
 import com.hariku.feature.mood.domain.model.MoodEntry
 import com.hariku.feature.mood.domain.model.MoodTrackerLogic
@@ -13,6 +13,7 @@ import com.hariku.feature.mood.domain.usecase.UpdateMoodEntryUseCase
 import com.hariku.feature.mood.presentation.MoodBurstStyle
 import com.hariku.feature.mood.presentation.MoodTapMotionCatalog
 import com.hariku.feature.mood.presentation.QuickMoodUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -90,9 +91,13 @@ class QuickMoodTrackerTest {
     }
 
     @Test
-    fun saveObserveUpdateAndDeleteFlowWorksEndToEndWithFakeDao() = runBlocking {
-        val fakeDao = FakeMoodDao()
-        val repository = MoodRepositoryImpl(fakeDao)
+    fun saveObserveUpdateAndDeleteFlowWorksEndToEndWithFakeRemote() = runBlocking {
+        val fakeRemote = FakeMoodRemoteDataSource()
+        val repository = MoodRepositoryImpl(
+            remoteDataSource = fakeRemote,
+            userIdFlow = MutableStateFlow("user_A"),
+            ioDispatcher = Dispatchers.Unconfined
+        )
         val observeUseCase = ObserveMoodEntriesUseCase(repository)
         val saveUseCase = SaveQuickMoodUseCase(repository)
         val updateUseCase = UpdateMoodEntryUseCase(repository)
@@ -108,8 +113,8 @@ class QuickMoodTrackerTest {
         assertTrue(saveResult.isSuccess)
         val savedId = saveResult.getOrThrow()
 
-        // Inject an unknown label row directly in storage to ensure graceful filtering.
-        fakeDao.insert(MoodEntryEntity(moodType = "UnknownLegacy", timestamp = timestamp))
+        // Inject an unknown label document directly in storage to ensure graceful filtering.
+        fakeRemote.save(MoodEntryDto(moodType = "UnknownLegacy", timestamp = timestamp), "user_A")
 
         val observed = observeUseCase().first()
         assertEquals(1, observed.size)
@@ -133,6 +138,20 @@ class QuickMoodTrackerTest {
         val deleteResult = deleteUseCase(savedId)
         assertTrue(deleteResult.isSuccess)
         assertTrue(observeUseCase().first().isEmpty())
+    }
+
+    @Test
+    fun repositoryRejectsMutationsWhenUnauthenticated() = runBlocking {
+        val repository = MoodRepositoryImpl(
+            remoteDataSource = FakeMoodRemoteDataSource(),
+            userIdFlow = MutableStateFlow(null),
+            ioDispatcher = Dispatchers.Unconfined
+        )
+
+        assertTrue(ObserveMoodEntriesUseCase(repository)().first().isEmpty())
+        assertTrue(SaveQuickMoodUseCase(repository)(MoodType.SENANG, "catatan", 1_000L).isFailure)
+        assertTrue(UpdateMoodEntryUseCase(repository)(1L, MoodType.BIASA, "edit").isFailure)
+        assertTrue(DeleteMoodEntryUseCase(repository)(1L).isFailure)
     }
 
     @Test
@@ -289,29 +308,50 @@ class QuickMoodTrackerTest {
         assertEquals(nearLimit, MoodTrackerLogic.toggleContextTag(nearLimit, "Istirahat"))
     }
 
-    private class FakeMoodDao : MoodDao {
+    private class FakeMoodRemoteDataSource : MoodRemoteDataSource {
         private var nextId = 1L
-        private val items = MutableStateFlow<List<MoodEntryEntity>>(emptyList())
+        private val items = MutableStateFlow<List<MoodEntryDto>>(emptyList())
 
-        override suspend fun insert(entry: MoodEntryEntity): Long {
-            val id = nextId++
-            val saved = entry.copy(id = id)
-            items.value = (items.value + saved)
-                .sortedWith(compareByDescending<MoodEntryEntity> { it.timestamp }.thenByDescending { it.id })
+        override fun observeAll(userId: String): Flow<List<MoodEntryDto>> =
+            items.map { list -> list.filter { it.userId == userId } }
+
+        override suspend fun save(entry: MoodEntryDto, userId: String): Long? {
+            val id = if (entry.id == 0L) nextId++ else entry.id
+            val saved = entry.copy(id = id, userId = userId)
+            items.value = (items.value.filterNot { it.id == id && it.userId == userId } + saved)
+                .sortedWith(compareByDescending<MoodEntryDto> { it.timestamp }.thenByDescending { it.id })
             return id
         }
 
-        override fun observeEntries(userId: String): Flow<List<MoodEntryEntity>> =
-            items.map { list -> list.filter { it.userId == userId } }
-
-        override suspend fun updateById(entryId: Long, userId: String, moodType: String, note: String) {
-            items.value = items.value.map { entry ->
-                if (entry.id == entryId && entry.userId == userId) entry.copy(moodType = moodType, note = note) else entry
-            }
+        override suspend fun upsertBatch(entries: List<MoodEntryDto>, userId: String) {
+            val byId = entries.associate { it.id to it.copy(userId = userId) }
+            items.value = (items.value.filterNot { it.userId == userId && it.id in byId } + byId.values)
+                .sortedWith(compareByDescending<MoodEntryDto> { it.timestamp }.thenByDescending { it.id })
         }
 
-        override suspend fun deleteById(entryId: Long, userId: String) {
+        override suspend fun update(
+            entryId: Long,
+            userId: String,
+            moodType: String,
+            note: String,
+            updatedAt: Long
+        ): Boolean {
+            var updated = false
+            items.value = items.value.map { entry ->
+                if (entry.id == entryId && entry.userId == userId) {
+                    updated = true
+                    entry.copy(moodType = moodType, note = note, updatedAt = updatedAt)
+                } else {
+                    entry
+                }
+            }
+            return updated
+        }
+
+        override suspend fun delete(entryId: Long, userId: String): Boolean {
+            val before = items.value.size
             items.value = items.value.filterNot { it.id == entryId && it.userId == userId }
+            return before > items.value.size
         }
     }
 }

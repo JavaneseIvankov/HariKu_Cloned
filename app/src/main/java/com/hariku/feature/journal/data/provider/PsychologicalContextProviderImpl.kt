@@ -10,10 +10,7 @@ import com.hariku.feature.mood.domain.repository.MoodRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -35,76 +32,74 @@ class PsychologicalContextProviderImpl(
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : PsychologicalContextProvider {
 
-    override fun observeMetrics(): Flow<PsychologicalMetrics> {
-        val moodFlow = runCatching {
-            moodRepository.observeMoodEntries()
-                .catch { emit(emptyList()) }
-        }.getOrElse { flowOf(emptyList()) }
-
-        val chatMessagesFlow = observeLatestUserMessages()
-
-        return combine(moodFlow, chatMessagesFlow) { moodEntries, userMessages ->
-            if (moodEntries.isEmpty() && userMessages.isEmpty()) {
-                PsychologicalMetrics.NEUTRAL
-            } else {
-                val eviScore = VolatilityCalculator.calculateEvi(moodEntries)
-                val eviLevel = VolatilityCalculator.classify(eviScore)
-                val adsScore = AnxietyLexiconAnalyzer.analyzeLatestWithDecay(userMessages)
-                val adsLevel = AnxietyLexiconAnalyzer.classify(adsScore)
-                PsychologicalMetrics(
-                    eviScore = eviScore,
-                    eviLevel = eviLevel,
-                    adsScore = adsScore,
-                    adsLevel = adsLevel,
-                    isDefaultFallback = false
-                )
-            }
-        }
-            .catch { emit(PsychologicalMetrics.NEUTRAL) }
-            .flowOn(defaultDispatcher)
-    }
-
-    private fun observeLatestUserMessages(): Flow<List<AnxietyLexiconAnalyzer.TimedMessage>> =
+    override fun observeMetrics(): Flow<PsychologicalMetrics> =
         userIdFlow
+            .map { it?.trim()?.takeIf(String::isNotEmpty) }
             .distinctUntilChanged()
             .flatMapLatest { userId ->
-                if (userId.isNullOrBlank()) {
-                    flowOf(emptyList())
+                if (userId == null) {
+                    flowOf(PsychologicalMetrics.NEUTRAL)
                 } else {
-                    runCatching {
-                        chatbotRepository.getChatbotsWithHistory(userId)
-                            .flatMapLatest { result ->
-                                val chatbotIds = result.getOrNull()
-                                    .orEmpty()
-                                    .map { it.chatbot.id }
-                                    .filter { it.isNotBlank() }
-                                    .distinct()
-                                if (chatbotIds.isEmpty()) {
-                                    flowOf(emptyList())
-                                } else {
-                                    combine(chatbotIds.map { chatbotId ->
-                                        chatbotRepository.getChatMessages(chatbotId, userId)
-                                            .map { messagesResult ->
-                                                messagesResult.getOrDefault(emptyList())
-                                                    .filter { it.isFromUser }
-                                                    .map {
-                                                        AnxietyLexiconAnalyzer.TimedMessage(
-                                                            text = it.message,
-                                                            timestampMillis = it.timestamp
-                                                        )
-                                                    }
-                                            }
-                                            .catch { emit(emptyList()) }
-                                    }) { chats: Array<List<AnxietyLexiconAnalyzer.TimedMessage>> ->
-                                        chats.flatMap { it }.sortedBy { it.timestampMillis }
-                                    }
-                                }
-                            }
+                    val moodFlow = runCatching {
+                        moodRepository.observeMoodEntries()
                             .catch { emit(emptyList()) }
                     }.getOrElse { flowOf(emptyList()) }
+
+                    val chatMessagesFlow = observeUserMessages(userId)
+
+                    combine(moodFlow, chatMessagesFlow) { moodEntries, userMessages ->
+                        if (moodEntries.isEmpty() && userMessages.isEmpty()) {
+                            PsychologicalMetrics.NEUTRAL
+                        } else {
+                            val eviScore = VolatilityCalculator.calculateEvi(moodEntries)
+                            val eviLevel = VolatilityCalculator.classify(eviScore)
+                            val adsScore = AnxietyLexiconAnalyzer.analyzeLatestWithDecay(userMessages)
+                            val adsLevel = AnxietyLexiconAnalyzer.classify(adsScore)
+                            PsychologicalMetrics(
+                                eviScore = eviScore,
+                                eviLevel = eviLevel,
+                                adsScore = adsScore,
+                                adsLevel = adsLevel,
+                                isDefaultFallback = false
+                            )
+                        }
+                    }.catch { emit(PsychologicalMetrics.NEUTRAL) }
                 }
             }
-            .catch { emit(emptyList()) }
+            .flowOn(defaultDispatcher)
+
+    private fun observeUserMessages(userId: String): Flow<List<AnxietyLexiconAnalyzer.TimedMessage>> =
+        runCatching {
+            chatbotRepository.getChatbotsWithHistory(userId)
+                .flatMapLatest { result ->
+                    val chatbotIds = result.getOrNull()
+                        .orEmpty()
+                        .map { it.chatbot.id }
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                    if (chatbotIds.isEmpty()) {
+                        flowOf(emptyList())
+                    } else {
+                        combine(chatbotIds.map { chatbotId ->
+                            chatbotRepository.getChatMessages(chatbotId, userId)
+                                .map { messagesResult ->
+                                    messagesResult.getOrDefault(emptyList())
+                                        .filter { it.isFromUser }
+                                        .map {
+                                            AnxietyLexiconAnalyzer.TimedMessage(
+                                                text = it.message,
+                                                timestampMillis = it.timestamp
+                                            )
+                                        }
+                                }
+                                .catch { emit(emptyList()) }
+                        }) { chats: Array<List<AnxietyLexiconAnalyzer.TimedMessage>> ->
+                            chats.flatMap { it }.sortedBy { it.timestampMillis }
+                        }
+                    }
+                }
+                .catch { emit(emptyList()) }
+        }.getOrElse { flowOf(emptyList()) }
 
     companion object {
         fun observeFirebaseUserIdFlow(

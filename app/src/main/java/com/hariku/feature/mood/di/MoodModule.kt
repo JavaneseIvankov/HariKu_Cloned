@@ -1,7 +1,14 @@
 package com.hariku.feature.mood.di
 
+import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
 import com.hariku.core.auth.CurrentUserSession
-import com.hariku.feature.mood.data.local.MoodDatabase
+import com.hariku.feature.mood.data.local.LocalMoodStore
+import com.hariku.feature.mood.data.local.MoodLocalMigrator
+import com.hariku.feature.mood.data.local.RoomMoodLocalMigrator
+import com.hariku.feature.mood.data.local.SqliteLocalMoodStore
+import com.hariku.feature.mood.data.remote.MoodFirebaseService
+import com.hariku.feature.mood.data.remote.MoodRemoteDataSource
 import com.hariku.feature.mood.data.repository.MoodRepositoryImpl
 import com.hariku.feature.mood.domain.repository.MoodRepository
 import com.hariku.feature.mood.domain.usecase.DeleteMoodEntryUseCase
@@ -14,12 +21,30 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val moodModule = module {
-    single { MoodDatabase.open(androidContext()) }
-    single { get<MoodDatabase>().moodDao() }
+    single<MoodRemoteDataSource> {
+        MoodFirebaseService(
+            firestore = get(),
+            isAuthenticated = {
+                get<CurrentUserSession>().currentUserIdOrNull() != null &&
+                    runCatching { get<FirebaseAuth>().currentUser != null }.getOrDefault(false)
+            }
+        )
+    }
+    single<LocalMoodStore> { SqliteLocalMoodStore(context = androidContext()) }
+    single<MoodLocalMigrator> {
+        RoomMoodLocalMigrator(
+            localStore = get(),
+            remoteDataSource = get(),
+            onError = { error ->
+                Log.w("RoomMoodLocalMigrator", "Gagal migrasi mood lokal ke Firestore", error)
+            }
+        )
+    }
     single<MoodRepository> {
         MoodRepositoryImpl(
-            moodDao = get(),
-            userIdFlow = get<CurrentUserSession>().userIdFlow
+            remoteDataSource = get(),
+            userIdFlow = get<CurrentUserSession>().userIdFlow,
+            localMigrator = get()
         )
     }
 

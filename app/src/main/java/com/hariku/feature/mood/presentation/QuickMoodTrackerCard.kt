@@ -149,22 +149,24 @@ fun QuickMoodTrackerCard(
     onConfirmEditEntry: () -> Unit = {}
 ) {
     val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
-    val latestEntry = state.latestTodayEntry
+    val latestEntry = if (state.isAuthenticated && state.loadError == null) state.latestTodayEntry else null
 
-    state.editingEntry?.let { editingEntry ->
-        EditMoodEntryDialog(
-            entry = editingEntry,
-            selectedMood = state.editMood ?: editingEntry.mood,
-            noteText = state.editNote,
-            timeText = formatMoodTime(editingEntry.timestamp, timeFormatter),
-            isSaving = state.isSaving,
-            errorMessage = state.actionError,
-            onMoodSelected = onEditMoodSelected,
-            onNoteChanged = onEditNoteChanged,
-            onToggleQuickTag = onToggleEditQuickTag,
-            onDismiss = onDismissEditEntry,
-            onConfirm = onConfirmEditEntry
-        )
+    if (state.isAuthenticated && state.loadError == null) {
+        state.editingEntry?.let { editingEntry ->
+            EditMoodEntryDialog(
+                entry = editingEntry,
+                selectedMood = state.editMood ?: editingEntry.mood,
+                noteText = state.editNote,
+                timeText = formatMoodTime(editingEntry.timestamp, timeFormatter),
+                isSaving = state.isSaving,
+                errorMessage = state.actionError,
+                onMoodSelected = onEditMoodSelected,
+                onNoteChanged = onEditNoteChanged,
+                onToggleQuickTag = onToggleEditQuickTag,
+                onDismiss = onDismissEditEntry,
+                onConfirm = onConfirmEditEntry
+            )
+        }
     }
 
     Card(
@@ -223,7 +225,7 @@ fun QuickMoodTrackerCard(
             }
 
             // Unified summary strip for check-in streak and today's entry count
-            if (!state.isLoading && state.loadError == null && (state.streakDays > 0 || state.todayCount > 0)) {
+            if (state.isAuthenticated && !state.isLoading && state.loadError == null && (state.streakDays > 0 || state.todayCount > 0)) {
                 MoodSummaryStrip(
                     streakDays = state.streakDays,
                     hasCheckedInToday = state.hasCheckedInToday,
@@ -231,8 +233,26 @@ fun QuickMoodTrackerCard(
                 )
             }
 
-            // Body: loading / load error / mood grid
+            // Body: unauthenticated / loading / load error / mood grid
             when {
+                !state.isAuthenticated -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFFFAF6F2))
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Masuk ke akun untuk mencatat dan menyinkronkan suasana hatimu.",
+                            fontSize = 13.sp,
+                            color = MoodMuted,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
                 state.isLoading -> {
                     Box(
                         modifier = Modifier
