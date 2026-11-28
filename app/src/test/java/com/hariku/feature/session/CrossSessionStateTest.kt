@@ -437,6 +437,12 @@ class CrossSessionStateTest {
             }
         }
 
+        override suspend fun upsertBatch(entries: List<JournalEntryDto>, userId: String) {
+            val byId = entries.associate { it.id to it.copy(userId = userId) }
+            val remaining = items.value.filterNot { it.userId == userId && it.id in byId }
+            items.value = remaining + byId.values
+        }
+
         override suspend fun delete(id: Long, userId: String): Boolean {
             val before = items.value.size
             items.value = items.value.filterNot { it.id == id && it.userId == userId }
