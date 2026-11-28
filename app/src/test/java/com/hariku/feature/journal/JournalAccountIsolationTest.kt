@@ -1,15 +1,15 @@
 package com.hariku.feature.journal
 
-import com.hariku.core.auth.LOCAL_GUEST_USER_ID
 import com.hariku.feature.journal.data.dto.JournalEntryDto
 import com.hariku.feature.journal.data.remote.JournalRemoteDataSource
 import com.hariku.feature.journal.data.repository.JournalRepositoryImpl
 import com.hariku.feature.journal.domain.model.JournalCategoryTag
 import com.hariku.feature.journal.domain.model.JournalEntry
-import com.hariku.feature.mood.data.local.MoodDao
-import com.hariku.feature.mood.data.local.MoodEntryEntity
+import com.hariku.feature.mood.data.dto.MoodEntryDto
+import com.hariku.feature.mood.data.remote.MoodRemoteDataSource
 import com.hariku.feature.mood.data.repository.MoodRepositoryImpl
 import com.hariku.feature.mood.domain.model.MoodType
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -25,7 +25,7 @@ class JournalAccountIsolationTest {
     @Test
     fun moodRepository_isolatesEntriesAcrossAccountSwitches() = runBlocking {
         val userIdFlow = MutableStateFlow<String?>("user_A")
-        val repository = MoodRepositoryImpl(FakeMoodDao(), userIdFlow)
+        val repository = MoodRepositoryImpl(FakeMoodRemoteDataSource(), userIdFlow, Dispatchers.Unconfined)
 
         repository.saveMood(MoodType.SENANG, "milik A", 1_000L)
         assertEquals(listOf("milik A"), repository.observeMoodEntries().first().map { it.note })
@@ -41,24 +41,31 @@ class JournalAccountIsolationTest {
     }
 
     @Test
-    fun moodRepository_cannotDeleteOtherAccountsEntry() = runBlocking {
+    fun moodRepository_cannotUpdateOrDeleteOtherAccountsEntry() = runBlocking {
         val userIdFlow = MutableStateFlow<String?>("user_A")
-        val repository = MoodRepositoryImpl(FakeMoodDao(), userIdFlow)
+        val repository = MoodRepositoryImpl(FakeMoodRemoteDataSource(), userIdFlow, Dispatchers.Unconfined)
         val idA = repository.saveMood(MoodType.SENANG, "milik A", 1_000L).getOrThrow()
 
         userIdFlow.value = "user_B"
-        repository.deleteMood(idA)
+        assertTrue(repository.updateMood(idA, MoodType.MARAH, "overwrite").isFailure)
+        assertTrue(repository.deleteMood(idA).isFailure)
+        assertTrue(repository.deleteMood(idA + 100).isFailure)
 
         userIdFlow.value = "user_A"
-        assertEquals(1, repository.observeMoodEntries().first().size)
+        val entries = repository.observeMoodEntries().first()
+        assertEquals(1, entries.size)
+        assertEquals("milik A", entries.first().note)
     }
 
     @Test
-    fun moodRepository_usesLocalGuestScopeWhenNoUser() = runBlocking {
-        val dao = FakeMoodDao()
-        val repository = MoodRepositoryImpl(dao, MutableStateFlow<String?>(null))
-        repository.saveMood(MoodType.BIASA, "", 1_000L)
-        assertEquals(1, dao.observeEntries(LOCAL_GUEST_USER_ID).first().size)
+    fun moodRepository_requiresAuthenticatedUserWithoutGuestFallback() = runBlocking {
+        val remote = FakeMoodRemoteDataSource()
+        val repository = MoodRepositoryImpl(remote, MutableStateFlow<String?>(null), Dispatchers.Unconfined)
+
+        assertTrue(repository.observeMoodEntries().first().isEmpty())
+        assertTrue(repository.saveMood(MoodType.BIASA, "", 1_000L).isFailure)
+        assertTrue(repository.updateMood(1L, MoodType.SENANG, "x").isFailure)
+        assertTrue(repository.deleteMood(1L).isFailure)
     }
 
     @Test
@@ -117,27 +124,47 @@ class JournalAccountIsolationTest {
         assertEquals("A", entries.first().title)
     }
 
-    private class FakeMoodDao : MoodDao {
+    private class FakeMoodRemoteDataSource : MoodRemoteDataSource {
         private var nextId = 1L
-        private val items = MutableStateFlow<List<MoodEntryEntity>>(emptyList())
+        private val items = MutableStateFlow<List<MoodEntryDto>>(emptyList())
 
-        override suspend fun insert(entry: MoodEntryEntity): Long {
-            val id = nextId++
-            items.value = items.value + entry.copy(id = id)
+        override fun observeAll(userId: String): Flow<List<MoodEntryDto>> =
+            items.map { list -> list.filter { it.userId == userId } }
+
+        override suspend fun save(entry: MoodEntryDto, userId: String): Long? {
+            val id = if (entry.id == 0L) nextId++ else entry.id
+            items.value = items.value + entry.copy(id = id, userId = userId)
             return id
         }
 
-        override fun observeEntries(userId: String): Flow<List<MoodEntryEntity>> =
-            items.map { list -> list.filter { it.userId == userId } }
-
-        override suspend fun updateById(entryId: Long, userId: String, moodType: String, note: String) {
-            items.value = items.value.map {
-                if (it.id == entryId && it.userId == userId) it.copy(moodType = moodType, note = note) else it
-            }
+        override suspend fun upsertBatch(entries: List<MoodEntryDto>, userId: String) {
+            val byId = entries.associate { it.id to it.copy(userId = userId) }
+            items.value = items.value.filterNot { it.userId == userId && it.id in byId } + byId.values
         }
 
-        override suspend fun deleteById(entryId: Long, userId: String) {
+        override suspend fun update(
+            entryId: Long,
+            userId: String,
+            moodType: String,
+            note: String,
+            updatedAt: Long
+        ): Boolean {
+            var updated = false
+            items.value = items.value.map {
+                if (it.id == entryId && it.userId == userId) {
+                    updated = true
+                    it.copy(moodType = moodType, note = note, updatedAt = updatedAt)
+                } else {
+                    it
+                }
+            }
+            return updated
+        }
+
+        override suspend fun delete(entryId: Long, userId: String): Boolean {
+            val before = items.value.size
             items.value = items.value.filterNot { it.id == entryId && it.userId == userId }
+            return before > items.value.size
         }
     }
 

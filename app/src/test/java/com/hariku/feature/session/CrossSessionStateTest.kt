@@ -31,8 +31,8 @@ import com.hariku.feature.journal.domain.usecase.ObserveJournalEntriesUseCase
 import com.hariku.feature.journal.domain.usecase.TogglePinJournalUseCase
 import com.hariku.feature.journal.presentation.JournalViewModel
 import com.hariku.feature.journal.presentation.detail.JournalDetailViewModel
-import com.hariku.feature.mood.data.local.MoodDao
-import com.hariku.feature.mood.data.local.MoodEntryEntity
+import com.hariku.feature.mood.data.dto.MoodEntryDto
+import com.hariku.feature.mood.data.remote.MoodRemoteDataSource
 import com.hariku.feature.mood.data.repository.MoodRepositoryImpl
 import com.hariku.feature.mood.domain.model.MoodType
 import com.hariku.feature.mood.domain.usecase.DeleteMoodEntryUseCase
@@ -189,7 +189,7 @@ class CrossSessionStateTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         try {
             val userIdFlow = MutableStateFlow<String?>("user_A")
-            val moodRepo = MoodRepositoryImpl(FakeMoodDao(), userIdFlow)
+            val moodRepo = MoodRepositoryImpl(FakeMoodRemoteDataSource(), userIdFlow, Dispatchers.Unconfined)
             val vm = QuickMoodViewModel(
                 observeMoodEntriesUseCase = ObserveMoodEntriesUseCase(moodRepo),
                 saveQuickMoodUseCase = SaveQuickMoodUseCase(moodRepo),
@@ -233,7 +233,7 @@ class CrossSessionStateTest {
         try {
             val userIdFlow = MutableStateFlow<String?>("user_A")
             val journalRepo = JournalRepositoryImpl(FakeJournalRemoteDataSource(), userIdFlow, Dispatchers.Unconfined)
-            val moodRepo = MoodRepositoryImpl(FakeMoodDao(), userIdFlow)
+            val moodRepo = MoodRepositoryImpl(FakeMoodRemoteDataSource(), userIdFlow, Dispatchers.Unconfined)
             val chatbotRepo = FakeMultiAccountChatbotRepository()
 
             val entryIdA = journalRepo.save(
@@ -381,27 +381,47 @@ class CrossSessionStateTest {
         override suspend fun markMessagesAsRead(chatbotId: String, userId: String): Result<Unit> = Result.success(Unit)
     }
 
-    private class FakeMoodDao : MoodDao {
+    private class FakeMoodRemoteDataSource : MoodRemoteDataSource {
         private var nextId = 1L
-        private val items = MutableStateFlow<List<MoodEntryEntity>>(emptyList())
+        private val items = MutableStateFlow<List<MoodEntryDto>>(emptyList())
 
-        override suspend fun insert(entry: MoodEntryEntity): Long {
-            val id = nextId++
-            items.value = listOf(entry.copy(id = id)) + items.value
+        override fun observeAll(userId: String): Flow<List<MoodEntryDto>> =
+            items.map { list -> list.filter { it.userId == userId } }
+
+        override suspend fun save(entry: MoodEntryDto, userId: String): Long? {
+            val id = if (entry.id == 0L) nextId++ else entry.id
+            items.value = listOf(entry.copy(id = id, userId = userId)) + items.value
             return id
         }
 
-        override fun observeEntries(userId: String): Flow<List<MoodEntryEntity>> =
-            items.map { list -> list.filter { it.userId == userId } }
-
-        override suspend fun updateById(entryId: Long, userId: String, moodType: String, note: String) {
-            items.value = items.value.map {
-                if (it.id == entryId && it.userId == userId) it.copy(moodType = moodType, note = note) else it
-            }
+        override suspend fun upsertBatch(entries: List<MoodEntryDto>, userId: String) {
+            val byId = entries.associate { it.id to it.copy(userId = userId) }
+            items.value = items.value.filterNot { it.userId == userId && it.id in byId } + byId.values
         }
 
-        override suspend fun deleteById(entryId: Long, userId: String) {
+        override suspend fun update(
+            entryId: Long,
+            userId: String,
+            moodType: String,
+            note: String,
+            updatedAt: Long
+        ): Boolean {
+            var updated = false
+            items.value = items.value.map {
+                if (it.id == entryId && it.userId == userId) {
+                    updated = true
+                    it.copy(moodType = moodType, note = note, updatedAt = updatedAt)
+                } else {
+                    it
+                }
+            }
+            return updated
+        }
+
+        override suspend fun delete(entryId: Long, userId: String): Boolean {
+            val before = items.value.size
             items.value = items.value.filterNot { it.id == entryId && it.userId == userId }
+            return before > items.value.size
         }
     }
 

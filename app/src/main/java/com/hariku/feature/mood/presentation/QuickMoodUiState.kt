@@ -6,6 +6,7 @@ import com.hariku.feature.mood.domain.model.MoodType
 data class QuickMoodUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    val isAuthenticated: Boolean = true,
     val latestTodayEntry: MoodEntry? = null,
     val todayEntries: List<MoodEntry> = emptyList(),
     val streakDays: Int = 0,

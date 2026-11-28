@@ -18,12 +18,16 @@ fun StatisticScreen(
     onOpenSos: () -> Unit,
     viewModel: StatisticViewModel = koinViewModel()
 ) {
-    val entries by viewModel.entries.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize().background(Color(0xFFF9F9F9))) {
         SosTopBar(title = "Statistik", onSosClick = onOpenSos)
         Box(Modifier.weight(1f)) {
-            MoodReportScreen(entries)
+            MoodReportScreen(
+                entries = if (state.isLoading) null else state.entries,
+                loadError = state.loadError,
+                onRetry = viewModel::retryLoad
+            )
         }
     }
 }

@@ -1,9 +1,7 @@
 package com.hariku.feature.mood.presentation
 
-import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hariku.core.auth.toScopedUserId
 import com.hariku.feature.mood.domain.model.MoodEntry
 import com.hariku.feature.mood.domain.model.MoodTrackerLogic
 import com.hariku.feature.mood.domain.model.MoodType
@@ -11,6 +9,7 @@ import com.hariku.feature.mood.domain.usecase.DeleteMoodEntryUseCase
 import com.hariku.feature.mood.domain.usecase.ObserveMoodEntriesUseCase
 import com.hariku.feature.mood.domain.usecase.SaveQuickMoodUseCase
 import com.hariku.feature.mood.domain.usecase.UpdateMoodEntryUseCase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -48,32 +46,37 @@ class QuickMoodViewModel(
     val uiState: StateFlow<QuickMoodUiState> = _uiState.asStateFlow()
 
     private var observeJob: Job? = null
+    private var mutationJob: Job? = null
+    private var sessionGeneration: Long = 0L
 
     init {
-        observeMoodEntries()
         observeSessionChanges()
+        if (observeJob == null) {
+            observeMoodEntries()
+        }
     }
 
     private fun observeSessionChanges() {
+        var isFirstEmission = true
         userIdFlow
-            .map { it.toScopedUserId() }
+            .map { it?.trim()?.takeIf(String::isNotEmpty) }
             .distinctUntilChanged()
-            .drop(1)
-            .onEach {
-                _uiState.update { state ->
-                    state.copy(
-                        isSaving = false,
-                        noteInput = "",
-                        isNoteExpanded = false,
-                        isHistoryExpanded = false,
-                        historyPage = 0,
-                        editingEntry = null,
-                        editMood = null,
-                        editNote = "",
-                        feedbackMessage = null,
-                        lastSavedEntryId = null,
-                        actionError = null
-                    )
+            .onEach { userId ->
+                val authenticated = userId != null
+                if (isFirstEmission) {
+                    isFirstEmission = false
+                    _uiState.update { it.copy(isAuthenticated = authenticated) }
+                } else {
+                    sessionGeneration += 1L
+                    mutationJob?.cancel()
+                    mutationJob = null
+                    _uiState.update {
+                        QuickMoodUiState(
+                            isLoading = true,
+                            isAuthenticated = authenticated
+                        )
+                    }
+                    observeMoodEntries()
                 }
             }
             .launchIn(scope)
@@ -187,6 +190,7 @@ class QuickMoodViewModel(
 
         val targetMood = current.editMood ?: targetEntry.mood
         val targetNote = current.editNote
+        val requestGeneration = sessionGeneration
 
         _uiState.update { state ->
             state.copy(
@@ -196,12 +200,14 @@ class QuickMoodViewModel(
             )
         }
 
-        scope.launch {
-            updateMoodEntryUseCase(
+        mutationJob = scope.launch {
+            val result = updateMoodEntryUseCase(
                 entryId = targetEntry.id,
                 mood = targetMood,
                 note = targetNote
-            ).fold(
+            )
+            if (requestGeneration != sessionGeneration) return@launch
+            result.fold(
                 onSuccess = {
                     _uiState.update { state ->
                         val clearedUndo = if (state.lastSavedEntryId == targetEntry.id) null else state.lastSavedEntryId
@@ -232,20 +238,23 @@ class QuickMoodViewModel(
         if (_uiState.value.isSaving) return
 
         val noteToSave = _uiState.value.noteInput
+        val requestGeneration = sessionGeneration
         _uiState.update { state ->
             state.copy(
                 isSaving = true,
                 actionError = null,
-                feedbackMessage = null
+                feedbackMessage = null,
+                lastSavedEntryId = null
             )
         }
 
-        scope.launch {
+        mutationJob = scope.launch {
             val result = saveQuickMoodUseCase(
                 mood = mood,
                 note = noteToSave,
                 timestamp = nowProvider()
             )
+            if (requestGeneration != sessionGeneration) return@launch
             result.fold(
                 onSuccess = { insertedId ->
                     _uiState.update { state ->
@@ -280,9 +289,12 @@ class QuickMoodViewModel(
     fun onDeleteEntry(entryId: Long, fromUndo: Boolean = false) {
         if (_uiState.value.isSaving) return
 
-        _uiState.update { it.copy(isSaving = true, actionError = null) }
-        scope.launch {
-            deleteMoodEntryUseCase(entryId).fold(
+        val requestGeneration = sessionGeneration
+        _uiState.update { it.copy(isSaving = true, actionError = null, feedbackMessage = null) }
+        mutationJob = scope.launch {
+            val result = deleteMoodEntryUseCase(entryId)
+            if (requestGeneration != sessionGeneration) return@launch
+            result.fold(
                 onSuccess = {
                     _uiState.update { state ->
                         val clearedUndo = if (state.lastSavedEntryId == entryId) null else state.lastSavedEntryId
@@ -321,20 +333,31 @@ class QuickMoodViewModel(
 
     private fun observeMoodEntries() {
         observeJob?.cancel()
+        val requestGeneration = sessionGeneration
         _uiState.update { it.copy(isLoading = true, loadError = null) }
 
         observeJob = scope.launch {
             observeMoodEntriesUseCase()
                 .catch { error ->
-                    if (error !is SQLiteException) throw error
+                    if (error is CancellationException) throw error
+                    if (requestGeneration != sessionGeneration) return@catch
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
+                            isSaving = false,
+                            latestTodayEntry = null,
+                            todayEntries = emptyList(),
+                            streakDays = 0,
+                            hasCheckedInToday = false,
+                            editingEntry = null,
+                            editMood = null,
+                            editNote = "",
                             loadError = "Catatan mood gagal dimuat."
                         )
                     }
                 }
                 .collect { entries ->
+                    if (requestGeneration != sessionGeneration) return@collect
                     val summary = MoodTrackerLogic.summarizeToday(
                         entries = entries,
                         today = todayProvider(),
